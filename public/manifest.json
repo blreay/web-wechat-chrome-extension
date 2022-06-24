@@ -1,7 +1,7 @@
 {
-  "name": "微信网页版",
+  "name": "微信网页版zzy_fork",
   "manifest_version": 2,
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "更好用的微信网页版扩展，可显示未读消息，从聊天列表快速查看信息，不含任何恶意广告。",
   "icons": {
     "20": "images/20.png",
@@ -20,10 +20,10 @@
   },
   "content_scripts": [{
     "js": [ "chrome/wxobserve.js" ],
-    "matches": [ "*://wx.qq.com/*" ],
+    "matches": [ "*://wx2.qq.com/*" ],
     "run_at": "document_start"
   }],
-  "permissions": ["tabs", "https://wx.qq.com/*"],
+  "permissions": ["tabs", "https://*.qq.com/*", "https://wx2.qq.com/*"],
   "homepage_url": "https://github.com/Geocld/web-wechat-chrome-extension",
   "web_accessible_resources": [
     "chrome/catchChatList.js",

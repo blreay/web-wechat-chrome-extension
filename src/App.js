@@ -35,7 +35,7 @@ class App extends Component {
         }, (wins) => {
             wins.forEach(win => {
                 win.tabs.forEach(tab => {
-                    if (/wx\.qq\.com/ig.test(tab.url)) {
+                    if (/wx2\.qq\.com/ig.test(tab.url)) {
                         this.setState({
                             hasOpenWx: true
                         });
@@ -73,7 +73,7 @@ class App extends Component {
             windows.forEach(function (win) {
                 if (win.tabs.length) {
                     win.tabs.forEach(function (tab) {
-                        if (/wx\.qq\.com/ig.test(tab.url)) {
+                        if (/wx2\.qq\.com/ig.test(tab.url)) {
                             windowId = tab.windowId;
                         }
                     });
@@ -82,15 +82,19 @@ class App extends Component {
 
             if (windowId) {
                 chrome.windows.update(windowId, {focused: true});
-                window.close();
+                //blreay: donnot close the popup win so that you can click the next msg convinently.
+                //TODO: add option to control this behavior
+                //window.close();
             } else {
                 chrome.windows.create({
-                    url: 'https://wx.qq.com',
+                    url: 'https://wx2.qq.com',
                     type: 'popup',
                     focused: true
                 }, function (w) {
                     console.log(w);
-                    window.close();
+                    //blreay: donnot close the popup win so that you can click the next msg convinently.
+                    //TODO: add option to control this behavior
+                    //window.close();
                 });
             }
         });
@@ -102,7 +106,7 @@ class App extends Component {
         }, (wins) => {
             wins.forEach(win => {
                 win.tabs.forEach(tab => {
-                    if (/wx\.qq\.com/ig.test(tab.url)) {
+                    if (/wx2\.qq\.com/ig.test(tab.url)) {
                         this.setState({
                             hasOpenWx: true
                         });
@@ -123,7 +127,7 @@ class App extends Component {
         }, (wins) => {
             wins.forEach(win => {
                 win.tabs.forEach(tab => {
-                    if (/wx\.qq\.com/ig.test(tab.url)) {
+                    if (/wx2\.qq\.com/ig.test(tab.url)) {
                         this.setState({
                             hasOpenWx: true
                         });
@@ -228,16 +232,23 @@ class App extends Component {
                 <MuiThemeProvider>
                     <List className="list">
                         {
-                            chatList.map((item, idx) => {
+                            chatList.filter(function(item, idx) {
+                                // 
+                                if (item.NoticeCount == 0 || (item.MMInChatroom && item.Statues == 0)) {
+                                    // console.log( item.NickName + " is ignored by zzy filter");
+                                    return false; // skip
+                                }
+                                return true;
+                              }).map((item, idx) => {
                                 return (
                                     <div key={idx}>
                                         <ListItem
                                             leftAvatar={
-                                                !!item.NoticeCount ?
+                                                !!item.NoticeCount != 0 ?
                                                     item.MMInChatroom && item.Statues == 0 ? (
                                                     <Badge
                                                         style={{ top: '-2px', left: '4px' }}
-                                                        badgeContent={''}
+                                                        badgeContent={'zzy'}
                                                         secondary={true}
                                                         badgeStyle={{
                                                             top: 20,
@@ -248,7 +259,7 @@ class App extends Component {
                                                             backgroundColor: '#d44139'
                                                         }}
                                                     >
-                                                        <Avatar src={'https://wx.qq.com' + item.HeadImgUrl} />
+                                                        <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
                                                     </Badge>
                                                 ) : (
                                                     <Badge
@@ -263,11 +274,11 @@ class App extends Component {
                                                             backgroundColor: '#d44139'
                                                         }}
                                                     >
-                                                        <Avatar src={'https://wx.qq.com' + item.HeadImgUrl} />
+                                                        <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
                                                     </Badge>
                                                 )
                                              : (
-                                                    <Avatar src={'https://wx.qq.com' + item.HeadImgUrl} />
+                                                    <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
 
                                                 )
                                             }
@@ -314,6 +325,7 @@ class App extends Component {
                 { this._renderUserInfo() }
                 { this._renderChatList() }
                 { this._renderButton() }
+                { this._renderUnRead() }
             </div>
         );
     }

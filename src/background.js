@@ -9,7 +9,7 @@ var open_wx = function () {
             }, function (wins) {
                 wins.forEach(function (win) {
                     win.tabs.forEach(function (tab) {
-                        if (/wx\.qq\.com/ig.test(tab.url)) {
+                        if (/wx2\.qq\.com/ig.test(tab.url)) {
                             setTimeout(function () {
                                 chrome.tabs.executeScript(tab.id, {
                                     file: 'chrome/wxInfo.js'
