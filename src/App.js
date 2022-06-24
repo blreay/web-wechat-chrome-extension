@@ -41,7 +41,7 @@ class App extends Component {
                         });
 
                         chrome.tabs.sendMessage(tab.id, {getChatList: true}, function(response){
-                            console.log('message has send to wxobserve.js')
+                            console.log('message has send to wxobserve.js for getChatList')
                         });
 
                         chrome.tabs.executeScript(tab.id, {
@@ -53,6 +53,14 @@ class App extends Component {
                                     isLogin: true,
                                     userInfo: info
                                 });
+                                //blreay: set background to get new message
+                                // 通知定时2秒进行清理
+                                /*
+                                setTimeout(function(e){
+                                    // 这里的id只要和创建的时候设置id值一样就行了，就可以清理对应id的通知了
+                                    chrome.notifications.clear("id");
+                                }, 2000);
+                                */
                             } else {
                                 this.setState({
                                     isLogin: false
@@ -112,7 +120,7 @@ class App extends Component {
                         });
 
                         chrome.tabs.sendMessage(tab.id, {username: username}, function(response){
-                            console.log('message has send to wxobserve.js')
+                            console.log('message has send to wxobserve.js for username')
                         });
                         this.viewWx();
                     }
@@ -300,6 +308,15 @@ class App extends Component {
                                             secondaryTextLines={1}
                                             onClick={() => {
                                                 this.activeChat(item.UserName);
+                                                //new Notification("ChromePluginNotify",{icon:"images/30.png",body:"这是一个谷歌浏览器的通知"});
+                                                /*
+                                                chrome.notifications.create("id", {	
+                                                    type : 'basic',
+                                                    title : ' XXXXXXX ',  // 这里我故意使显示这个为空，显得没那么拥挤
+                                                    message : 'Auto Recode Start · · ·',
+                                                    iconUrl : 'images/30.png'
+                                                });
+                                                */
                                             }}
                                         />
                                         <Divider inset={true} style={{backgroundColor: '#292c33'}} />

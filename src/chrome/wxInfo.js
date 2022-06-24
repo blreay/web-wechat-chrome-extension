@@ -10,11 +10,17 @@ function getWxInfo () {
         login = true;
     }
     let unreadCount = 0;
+    console.log("zzy300: chatItems.length=" + chatItems.length);
     for (let i = 0; i < chatItems.length; i++) {
         if (chatItems[i].getElementsByTagName("i") && chatItems[i].getElementsByTagName("i")[0]) {
             unreadCount += +chatItems[i].getElementsByTagName("i")[0].innerText;
         }
     }
+    //blreay
+    // var wxList = window.angular.element(document.getElementsByClassName('chat_list')[0]).scope().chatList;
+    // console.log("zzy301");
+    // console.log(wxList);
+
     return {
         avatar: avatar.src,
         nickname: nickname,

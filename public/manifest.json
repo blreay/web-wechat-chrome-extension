@@ -23,7 +23,11 @@
     "matches": [ "*://wx2.qq.com/*" ],
     "run_at": "document_start"
   }],
-  "permissions": ["tabs", "https://*.qq.com/*", "https://wx2.qq.com/*"],
+  "permissions": ["tabs", 
+    "https://*.qq.com/*", 
+    "https://wx2.qq.com/*",
+    "contextMenus",
+    "notifications"],
   "homepage_url": "https://github.com/Geocld/web-wechat-chrome-extension",
   "web_accessible_resources": [
     "chrome/catchChatList.js",

@@ -22,9 +22,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // popup通知content script才去拿数据
     chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         if (request.getChatList) {
+            console.log('zzy100: injectScript for catchChatList');
             injectScript(chrome.extension.getURL('chrome/catchChatList.js'), 'body');
             window.addEventListener("message", function(e) {
-                // console.log('收到了来自inject script的信息:')
+                console.log('收到了来自inject script的信息:')
                 // console.log(e.data.data);
                 // 将inject script拿到的数据发给popup展示
                 chrome.runtime.sendMessage({chatList: e.data.data});
@@ -32,10 +33,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (request.username) {
+            console.log('zzy100: injectScript for username');
             injectScript(chrome.extension.getURL('chrome/activeChatItem.js'), 'body', { username: request.username });
         }
 
         if (request.loginout) {
+            console.log('zzy100: injectScript for loginout');
             injectScript(chrome.extension.getURL('chrome/loginOut.js'), 'body');
         }
     });
@@ -45,10 +48,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetNode = document.body;
     var callback = function () {
         const now = new Date().getTime();
-        if (now - NEWEST > 100) {
+        if (now - NEWEST > 3000) {
             NEWEST = now;
             try {
                 chrome.runtime.sendMessage({update: true});
+                // Blreay
+                console.log('zzy101: injectScript for catchChatList after update message');
+                injectScript(chrome.extension.getURL('chrome/catchChatList.js'), 'body');
+                window.addEventListener("message", function(e) {
+                    console.log('收到了来自inject script的信息:')
+                    // console.log(e.data.data);
+                    // 将inject script拿到的数据发给popup展示
+                    chrome.runtime.sendMessage({chatList: e.data.data});
+                }, false);
+
             } catch (e) {
                 if (
                     e.message.match(/Invocation of form runtime\.connect/) &&
