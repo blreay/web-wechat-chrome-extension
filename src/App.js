@@ -9,6 +9,7 @@ import FlatButton from 'material-ui/FlatButton';
 import CircularProgress from 'material-ui/CircularProgress';
 import './App.css';
 
+
 class App extends Component {
 
     state = {
@@ -17,6 +18,7 @@ class App extends Component {
         userInfo: null,
         chatList: [] // 聊天列表
     }
+
 
     componentWillMount()  {
 
@@ -30,19 +32,32 @@ class App extends Component {
             }
         });
 
+        //这里主要是为了与background建立连接，当页面关闭的时候连接就会断开，此时background中你注册的连接关闭函数此时会执行，因为background环境一直存在，除非你关闭了电脑
+        var port = chrome.runtime.connect();
+
         chrome.windows.getAll({
             populate: true
         }, (wins) => {
             wins.forEach(win => {
                 win.tabs.forEach(tab => {
-                    if (/wx2\.qq\.com/ig.test(tab.url)) {
+                    console.log(tab.url);
+                    if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
+                        console.log("zzy00 matched" + tab.url);
                         this.setState({
                             hasOpenWx: true
                         });
 
+                        // blreay, 主动获得chatlist
                         chrome.tabs.sendMessage(tab.id, {getChatList: true}, function(response){
                             console.log('message has send to wxobserve.js for getChatList')
                         });
+
+                        setInterval(function(e){
+                            // 后台持续刷新列表，使得可以自动重新render
+                            chrome.tabs.sendMessage(tab.id, {getChatList: true}, function(response){
+                                console.log('message has send to wxobserve.js for getChatList in timer')
+                            });
+                            }, 2000);
 
                         chrome.tabs.executeScript(tab.id, {
                             file: 'chrome/wxInfo.js'
@@ -73,6 +88,51 @@ class App extends Component {
         });
     }
 
+    //Blreay: 实验结果显示：componentWillUnmount在chrome扩展的popup页面，是没有效果的。不会被调用到，改用新的方法：
+    // https://www.jianshu.com/p/ff8c15e8d88e
+    // 首先在你需要监听页面消失事件的js文件中与background建立连接，相关代码:
+    // 在background环境注册断开连接时需要处理的方法，相关代码:
+    /*
+    componentWillUnmount()  {
+        alert("will componentWillUnmount");
+        console.log("will componentWillUnmount");
+        // Blreay: send BlurPage message
+        chrome.windows.getAll({
+            populate: true
+        }, (wins) => {
+            wins.forEach(win => {
+                win.tabs.forEach(tab => {
+                    if (/wx2\.qq\.com/ig.test(tab.url)) {
+                        this.setState({
+                            hasOpenWx: true
+                        });
+
+                        chrome.tabs.sendMessage(tab.id, {blur: true}, function(response){
+                            console.log('message has send to wxobserve.js for blurpage')
+                        });
+                    }
+                });
+            });
+        });
+    }
+    */
+
+    /*
+    sleep = (ms) =>{
+        var start=Date.now(),end = start+ms;
+        while(Date.now() < end);
+        return;
+     }
+
+     sleep2 = (timeout) => {
+        return new Promise((resolve)=>{
+          setTimeout(()=>{
+            resolve();
+          }, timeout)
+        })
+      }
+      */
+
     viewWx = () => {
         let windowId = null;
         chrome.windows.getAll({
@@ -81,7 +141,7 @@ class App extends Component {
             windows.forEach(function (win) {
                 if (win.tabs.length) {
                     win.tabs.forEach(function (tab) {
-                        if (/wx2\.qq\.com/ig.test(tab.url)) {
+                        if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
                             windowId = tab.windowId;
                         }
                     });
@@ -102,7 +162,7 @@ class App extends Component {
                     console.log(w);
                     //blreay: donnot close the popup win so that you can click the next msg convinently.
                     //TODO: add option to control this behavior
-                    //window.close();
+                    window.close();
                 });
             }
         });
@@ -114,7 +174,7 @@ class App extends Component {
         }, (wins) => {
             wins.forEach(win => {
                 win.tabs.forEach(tab => {
-                    if (/wx2\.qq\.com/ig.test(tab.url)) {
+                    if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
                         this.setState({
                             hasOpenWx: true
                         });
@@ -135,7 +195,7 @@ class App extends Component {
         }, (wins) => {
             wins.forEach(win => {
                 win.tabs.forEach(tab => {
-                    if (/wx2\.qq\.com/ig.test(tab.url)) {
+                    if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
                         this.setState({
                             hasOpenWx: true
                         });
@@ -226,12 +286,19 @@ class App extends Component {
         if (!isLogin) {
             return null;
         } else {
+            /*
+            while(!chatList.length) {
+                this.sleep2(1);
+                console.log("zzy500: sleep to wait data");
+            };
+            */
+
             if (!chatList.length) {
                 return (
                     <MuiThemeProvider>
                         <div style={{textAlign: 'center'}}>
                             <CircularProgress />
-                            <div style={{fontSize: '12px', paddingBottom: '10px'}}>聊天列表获取中...</div>
+                            <div style={{fontSize: '12px', paddingBottom: '10px'}}>未读消息列表获取中...</div>
                         </div>
                     </MuiThemeProvider>
                 )
@@ -240,14 +307,21 @@ class App extends Component {
                 <MuiThemeProvider>
                     <List className="list">
                         {
+                            /*
                             chatList.filter(function(item, idx) {
-                                // 
+                                //
                                 if (item.NoticeCount == 0 || (item.MMInChatroom && item.Statues == 0)) {
                                     // console.log( item.NickName + " is ignored by zzy filter");
                                     return false; // skip
                                 }
                                 return true;
                               }).map((item, idx) => {
+                                */
+                                // arrayObj = Array.from(chatList);
+                                //arrayObj.sort(function(a,b) {return a.NoticeCount - b.NoticeCount});
+
+                                chatList.map((item, idx) => {
+                                // arrayObj.forEach((item,index) => {
                                 return (
                                     <div key={idx}>
                                         <ListItem
@@ -335,14 +409,14 @@ class App extends Component {
         return (
             <div className="wrap">
                 {
-                    isLogin ? null : (<h2 className="title">欢迎使用微信网页版</h2>)
+                    isLogin ? null : (<h2 className="title">欢迎使用微信网页版超级扩展</h2>)
                 }
 
                 { this._renderLogo() }
                 { this._renderUserInfo() }
                 { this._renderChatList() }
                 { this._renderButton() }
-                { this._renderUnRead() }
+                { /* this._renderUnRead() */}
             </div>
         );
     }

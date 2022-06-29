@@ -4,3 +4,4 @@ try {
 } catch (e) {
     // console.log(e)
 }
+console.log("zzy501 blur page done");
