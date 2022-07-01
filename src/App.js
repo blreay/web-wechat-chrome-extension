@@ -16,6 +16,7 @@ class App extends Component {
         hasOpenWx: false,
         isLogin: false,
         userInfo: null,
+        g_obj: this,
         chatList: [] // 聊天列表
     }
 
@@ -35,12 +36,22 @@ class App extends Component {
         //这里主要是为了与background建立连接，当页面关闭的时候连接就会断开，此时background中你注册的连接关闭函数此时会执行，因为background环境一直存在，除非你关闭了电脑
         var port = chrome.runtime.connect();
 
-        chrome.windows.getAll({
-            populate: true
-        }, (wins) => {
-            wins.forEach(win => {
-                win.tabs.forEach(tab => {
-                    console.log(tab.url);
+        /*
+        var bg = chrome.extension.getBackgroundPage();
+        var winid = bg.get_wx_winid();
+        console.log("read winid from background.js: " + winid);
+
+        // }, (wins) => {
+        //    wins.forEach(win => {
+
+        // chrome.windows.getAll({
+            if(winid) {
+        chrome.windows.get(winid, {
+            populate: true,
+            windowTypes: [ 'popup' ]
+        }, (win) => {
+            win.tabs.forEach(tab => {
+                    console.log("zzy100: " + tab.url);
                     if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
                         console.log("zzy00 matched" + tab.url);
                         this.setState({
@@ -75,7 +86,7 @@ class App extends Component {
                                     // 这里的id只要和创建的时候设置id值一样就行了，就可以清理对应id的通知了
                                     chrome.notifications.clear("id");
                                 }, 2000);
-                                */
+                                */ /*
                             } else {
                                 this.setState({
                                     isLogin: false
@@ -85,7 +96,49 @@ class App extends Component {
                     }
                 });
             });
-        });
+        } else {
+            console.log("zzy111: no weixin window");
+        }
+        */
+
+        let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
+        this.check_win_id(windowId, this, function(tabid, obj){
+            console.log("zzy00 matched" + tabid);
+            obj.setState({
+                hasOpenWx: true
+            });
+
+            // blreay, 主动获得chatlist
+            chrome.tabs.sendMessage(tabid, {getChatList: true}, function(response){
+                console.log('message has send to wxobserve.js for getChatList')
+            });
+
+            setInterval(function(e){
+                // 后台持续刷新列表，使得可以自动重新render
+                chrome.tabs.sendMessage(tabid, {getChatList: true}, function(response){
+                    console.log('message has send to wxobserve.js for getChatList in timer')
+                });
+             }, 2000);
+
+            chrome.tabs.executeScript(tabid, {
+                file: 'chrome/wxInfo.js'
+            }, res => {
+                let info = res[0];
+                if (!!info.avatar && !!info.nickname) { // 已登录，显示头像及昵称
+                    obj.setState({
+                        isLogin: true,
+                        userInfo: info
+                    });
+                } else {
+                    obj.setState({
+                        isLogin: false
+                    });
+                }
+            });
+        }, function(){
+            console.log("zzy111: no weixin window");
+        })
+        //});
     }
 
     //Blreay: 实验结果显示：componentWillUnmount在chrome扩展的popup页面，是没有效果的。不会被调用到，改用新的方法：
@@ -133,7 +186,31 @@ class App extends Component {
       }
       */
 
+    check_win_id = (winid, obj, ok_func, ng_func) => {
+        try{
+            chrome.windows.get(winid, {
+                populate: true,
+                windowTypes: [ 'popup' ]
+            }, (win) => {
+                win.tabs.forEach(tab => {
+                    // console.log("zzy100 check_win_id: " + tab.url);
+                    if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
+                        console.log("zzy00 url matched: " + tab.url);
+                        ok_func(tab.id, obj);
+                    } else {
+                        ng_func();
+                    }
+                });
+            });
+        } catch(e) {
+            console.error('Chrome extension, winid seems invalid:' + winid);
+            console.log(e);
+            ng_func();
+        }
+    }
+
     viewWx = () => {
+        /*
         let windowId = null;
         chrome.windows.getAll({
             populate: true
@@ -147,8 +224,47 @@ class App extends Component {
                     });
                 }
             });
+            */
+            /*
+            var winIsValid = false;
 
-            if (windowId) {
+            chrome.windows.get(winid, {
+                populate: true,
+                windowTypes: [ 'popup' ]
+            }, (win) => {
+                win.tabs.forEach(tab => {
+                        console.log("zzy100: " + tab.url);
+                        if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
+                            winIsValid = true;
+                            console.log("zzy00 matched" + tab.url);
+                        }
+                    });
+                });
+                */
+
+            let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
+            this.check_win_id(windowId, this, function(tabid, obj){
+                chrome.windows.update(windowId, {focused: true});
+            }, function(){
+                chrome.windows.create({
+                    url: 'https://wx2.qq.com',
+                    type: 'popup',
+                    focused: true
+                }, function (w) {
+                    // w is the window object
+                    console.log(w);
+                    // notify background.js the new window's ID
+
+                    var bg = chrome.extension.getBackgroundPage();
+                    bg.set_wx_winid(w.id); // 访问bg的函数
+
+                    //blreay: donnot close the popup win so that you can click the next msg convinently.
+                    //TODO: add option to control this behavior
+                    //window.close();
+                });
+            })
+            /*
+            if (this.check_win_id(winid)) {
                 chrome.windows.update(windowId, {focused: true});
                 //blreay: donnot close the popup win so that you can click the next msg convinently.
                 //TODO: add option to control this behavior
@@ -159,16 +275,23 @@ class App extends Component {
                     type: 'popup',
                     focused: true
                 }, function (w) {
+                    // w is the window object
                     console.log(w);
+                    // notify background.js the new window's ID
+
+                    var bg = chrome.extension.getBackgroundPage();
+                    bg.set_wx_winid(w.id); // 访问bg的函数
+
                     //blreay: donnot close the popup win so that you can click the next msg convinently.
                     //TODO: add option to control this behavior
-                    window.close();
+                    //window.close();
                 });
-            }
-        });
+            } */
+        // });
     }
 
     activeChat = (username) => {
+        /*
         chrome.windows.getAll({
             populate: true
         }, (wins) => {
@@ -187,9 +310,25 @@ class App extends Component {
                 });
             });
         });
+        */
+
+        let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
+        this.check_win_id(windowId, this, function(tabid, obj){
+            obj.setState({
+                hasOpenWx: true
+            });
+
+            chrome.tabs.sendMessage(tabid, {username: username}, function(response){
+                console.log('message has send to wxobserve.js for username')
+            });
+            obj.viewWx();
+        }, function(){
+            console.log("winid invalid");
+        })
     }
 
     loginout = () => {
+        /*
         chrome.windows.getAll({
             populate: true
         }, (wins) => {
@@ -208,6 +347,21 @@ class App extends Component {
                 });
             });
         });
+        */
+
+        let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
+        this.check_win_id(windowId, this, function(tabid, obj){
+            obj.setState({
+                hasOpenWx: true
+            });
+
+            chrome.tabs.sendMessage(tabid, {loginout: true}, function(response){
+                console.log('message has send to wxobserve.js')
+            });
+            window.close();
+        }, function(){
+            console.log("winid invalid");
+        })
     }
 
     _renderLogo = () => {

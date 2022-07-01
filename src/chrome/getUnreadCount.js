@@ -9,9 +9,11 @@ wxList.forEach(function(item, idx){
     }
 　});
 console.log("zzy301 unread = " + unread);
+mynickname = document.getElementsByClassName("nickname")[0].getElementsByClassName("display_name")[0].innerText;
 
 var data = {
-    unReadCount: unread
+    unReadCount: unread,
+    nickname: mynickname
 }
 // send message to content script
 // console.log('zzy300: window.postMessage for unread');

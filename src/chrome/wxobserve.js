@@ -1,8 +1,20 @@
 let resetTime = 60 * 1000 * 2;
 let isLost = false;
 let resetTimer = null;
+let currentWinID = null;
 
-console.log('zzy100: wxobserve.js is loaded');
+
+// currentWinID = window.id;
+// console.log('zzy100: wxobserve.js is loaded, current_window_id=' + currentWinID);
+
+/*
+chrome.windows.getCurrent(function (currentWindow) {
+	console.log('当前窗口ID：' + currentWindow.id);
+    currentWinID = currentWindow.id;
+});
+*/
+
+window.id
 
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -41,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (request.username) {
-            console.log('zzy100: injectScript for username');
+            console.log('zzy100: injectScript for username:' + request.username);
             injectScript(chrome.extension.getURL('chrome/activeChatItem.js'), 'body', { username: request.username });
             return;
         }

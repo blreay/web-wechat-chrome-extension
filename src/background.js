@@ -4,11 +4,39 @@ state = {
     userInfo: null,
     unRead: 0,
     tabid: null,
+    winid: null,
+    nickname: null,
     chatList: [] // 聊天列表
 }
 
 var timeid;
 var g_unread = 0;
+
+check_win_id = (winid, obj, ok_func, ng_func) => {
+    try{
+        chrome.windows.get(winid, {
+            populate: true,
+            windowTypes: [ 'popup' ]
+        }, (win) => {
+            win.tabs.forEach(tab => {
+                // console.log("zzy100 check_win_id: " + winid + " url: " + tab.url);
+                if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
+                    console.log("zzy100 check_win_id matched: " + winid + " url: " + tab.url);
+                    state.tabid = tab.id;
+                    ok_func(tab.id, obj);
+                } else {
+                    ng_func();
+                }
+
+
+            });
+        });
+    } catch(e) {
+        console.error('Chrome extension, winid seems invalid:' + winid);
+        console.log(e);
+        ng_func();
+    }
+}
 
 
 //Blreay: 当用户不小心点击了鼠标或者离开了扩展的popup页面，此时需要对一些数据进行清空或者删除一些不必要的数据.
@@ -16,7 +44,7 @@ var g_unread = 0;
 chrome.runtime.onConnect.addListener(function (externalPort) {
     externalPort.onDisconnect.addListener(function() {
         var ignoreError = chrome.runtime.lastError;
-        console.log("zzy200: onDisconnect");
+        console.log("zzy200: onDisconnect tabid=" + state.tabid);
         // 发送消失，把焦点设置为无效
         if (state.tabid) {
             chrome.tabs.sendMessage(state.tabid, {blur: true}, function(response){
@@ -31,10 +59,17 @@ console.log('zzy003: set addListener done');
 chrome.runtime.onMessage.addListener((request) => {
     // console.log("zzy001 msg arrived: " + request);
 
+    /*
+    if(request.winid != state.winid) {
+        console.log("received an invalid msg from winid=" + request.winid + ", expected winid=" + state.winid + ", ignore it");
+        return;
+    }
+    */
     if (request.unReadCount) {
         console.log(request);
         state.unRead = request.unReadCount.unReadCount;
-        console.log("zzy03 unread = " + state.unRead);
+        state.nickname = request.unReadCount.nickname;
+        //console.log("zzy03 unread = " + state.unRead);
         if (state.unread != 0) {
             g_unread = state.unread;
             /*
@@ -48,6 +83,36 @@ chrome.runtime.onMessage.addListener((request) => {
         } else {
             g_unread = 0;
         }
+
+        check_win_id(state.winid, null, function(tabid, obj) {
+            chrome.tabs.executeScript(tabid, {
+                file: 'chrome/wxInfo.js'
+            }, function (res) {
+                var info = res[0];
+                if(info.nickname != state.nickname) {
+                    console.log("received an invalid msg from nickname=" + state.nickname + ", expected nickname=" + info.nickname + ", ignore it");
+                    return;
+                }
+                if (info.login) { // 已登录
+                    info.unreadCount = state.unRead;
+                    console.log('zzy004: get new unread count = ' + info.unreadCount);
+                    if (+info.unreadCount) {
+                        chrome.browserAction.setBadgeText({text: info.unreadCount + ''});
+                        if (info.unreadCount < 99) {
+                            chrome.browserAction.setBadgeText({text: info.unreadCount + ''});
+                        } else if (info.unreadCount >= 99) {
+                            chrome.browserAction.setBadgeText({text: '99+'});
+                        }
+                    } else {
+                        chrome.browserAction.setBadgeText({text: ''});
+                    }
+                } else {
+                    chrome.browserAction.setBadgeText({text: ''});
+                }
+            });
+        }, function() {
+            console.log("winid is invalid");
+        })
     };
 
     //Blreay: donot response this message
@@ -69,81 +134,25 @@ chrome.runtime.onMessage.addListener((request) => {
     */
 });
 
+var set_wx_winid = function(id) {
+    state.winid = id
+    console.log("zzy110: weixin windowid is set to " + state.winid);
+}
+
+var get_wx_winid = function() {
+    console.log("zzy111: weixin windowid is returned with  " + state.winid);
+    return state.winid;
+}
+
 var open_wx = function () {
     chrome.browserAction.setBadgeText({text: ''});
     chrome.browserAction.setBadgeBackgroundColor({color: '#ea594b'});
 
     chrome.runtime.onMessage.addListener(function (req) {
         if (req.update) {
-            chrome.windows.getAll({
-                populate: true
-            }, function (wins) {
-                wins.forEach(function (win) {
-                    win.tabs.forEach(function (tab) {
-                        //if (/wx2\.qq\.com/ig.test(tab.url)) {
-                        if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
-                            state.tabid = tab.id;
-                            console.log('set timeout for tab.id=' + tab.id);
-                            clearTimeout(timeid);
-                            if(0) {
-                                // do nothing
-                                console.log('no settimeout for tab.id=' + tab.id);
-                            } else {
-                            timeid = setTimeout(function () {
-                                chrome.tabs.executeScript(tab.id, {
-                                    file: 'chrome/wxInfo.js'
-                                }, function (res) {
-                                    var info = res[0];
-                                    if (info.login) { // 已登录
-                                        info.unreadCount = state.unRead;
-                                        console.log('zzy004: get new unread count = ' + info.unreadCount);
-                                        if (+info.unreadCount) {
-                                            chrome.browserAction.setBadgeText({text: info.unreadCount + ''});
-                                            if (info.unreadCount < 99) {
-                                                chrome.browserAction.setBadgeText({text: info.unreadCount + ''});
-                                            } else if (info.unreadCount >= 99) {
-                                                chrome.browserAction.setBadgeText({text: '99+'});
-                                            }
-                                        } else {
-                                            chrome.browserAction.setBadgeText({text: ''});
-                                        }
-                                    } else {
-                                        chrome.browserAction.setBadgeText({text: ''});
-                                    }
-                                });
 
-                                //blreay: get chat list once by force
-                                /*
-                                chrome.tabs.sendMessage(tab.id, {getChatList: true}, function(response){
-                                    console.log('message has send to wxobserve.js by backgroud.js tab.id=' + tab.id)
-                                    return;
-                                });
-                                */
-
-                /*
-                                chrome.windows.getAll({
-                                    populate: true
-                                }, (wins) => {
-                                    wins.forEach(win => {
-                                        win.tabs.forEach(tab => {
-                                            if (/wx2\.qq\.com/ig.test(tab.url)) {
-                                                    chrome.tabs.sendMessage(tab.id, {getChatList: true}, function(response){
-                                                    console.log('message has send to wxobserve.js by backgroud.js tab.id=' + tab.id)
-                                                    return;
-                                                });
-                                            }
-                                        });
-                                    });
-                                });
-                                */
-
-                            }, 2000);
-                        }
-                        }
-                    });
-                });
-            });
         }
+
     });
 
 }
