@@ -12,6 +12,8 @@ state = {
 var timeid;
 var g_unread = 0;
 
+winid_set = new Set();
+
 check_win_id = (winid, obj, ok_func, ng_func) => {
     try{
         chrome.windows.get(winid, {
@@ -136,12 +138,14 @@ chrome.runtime.onMessage.addListener((request) => {
 
 var set_wx_winid = function(id) {
     state.winid = id
+    winid_set.add(id);
     console.log("zzy110: weixin windowid is set to " + state.winid);
 }
 
 var get_wx_winid = function() {
-    console.log("zzy111: weixin windowid is returned with  " + state.winid);
-    return state.winid;
+    console.log("zzy111: weixin windowid is returned with  " + winid_set.keys());
+    console.log(winid_set);
+    return winid_set;
 }
 
 var open_wx = function () {

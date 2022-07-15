@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         if (request.getChatList) {
             console.log('zzy100: injectScript for catchChatList');
+            var winid = document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid');
             injectScript(chrome.extension.getURL('chrome/catchChatList.js'), 'body');
             // fix bug: message is received multiple times
             // https://zhuanlan.zhihu.com/p/144330696?from_voters_page=true
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // console.log(e)
                 // console.log(e.data.data);
                 // 将inject script拿到的数据发给popup展示
-                chrome.runtime.sendMessage({chatList: e.data.data});
+                chrome.runtime.sendMessage({chatList: e.data.data, window_id: winid});
             };
             //}, false);
             return;
@@ -77,6 +78,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(function(e){
         // 后台发送unread message count
         // console.log('zzy102: injectScript for chrome/getUnreadCount.js');
+        var winid = document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid');
+        console.log("zzy600: winid from blreay_paramsContainer.blreay_winid = " + winid);
         injectScript(chrome.extension.getURL('chrome/getUnreadCount.js'), 'body');
         // fix bug: message is received multiple times
         // https://zhuanlan.zhihu.com/p/144330696?from_voters_page=true
@@ -85,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // console.log(e)
             // console.log(e.data.data);
             // 将inject script拿到的数据发给popup展示
-            chrome.runtime.sendMessage({unReadCount: e.data.data});
+            chrome.runtime.sendMessage({unReadCount: e.data.data, window_id: winid});
         };
         }, 10000);
 

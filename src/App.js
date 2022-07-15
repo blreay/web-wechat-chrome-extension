@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Badge from 'material-ui/Badge';
 import Avatar from 'material-ui/Avatar';
@@ -17,19 +17,68 @@ class App extends Component {
         isLogin: false,
         userInfo: null,
         g_obj: this,
+        user1: null,
+        users: new Map(),
         chatList: [] // 聊天列表
     }
 
+    componentWillMount() {
 
-    componentWillMount()  {
-
+        /*
+                            request.chatList.window_id: {
+                        chatList: request.chatList.chatList
+                    }
+                    */
         // 监听content script那边发送过来的数据（聊天列表、用户列表）
         chrome.runtime.onMessage.addListener((request) => {
             if (request.chatList) {
+                console.log('zzy503: receive getchatlist message, window_id=' + request.window_id);
+
+                /*
+                this.setState(prevState => {
+                    let newobj = Object.assign({}, prevState);  // creating copy of state variable jasper
+                    newobj.name = 'someothername';                     // update the name property, assign a new value                 
+                    return { newobj };                                 // return new object jasper object
+                  })
+
+                this.setState(prevState => {
+                    let user1 = Object.assign({}, prevState.user1);  // creating copy of state variable jasper
+                    user1.name = 'someothername';                     // update the name property, assign a new value                 
+                    return { user1 };                                 // return new object jasper object
+                  })
+
+                // let aaa = "testvarname";
+                this.setState({
+                    aaa: request.chatList.chatList
+                });
                 this.setState({
                     chatList: request.chatList.chatList
                 });
-                console.log(this.state.chatList)
+                
+                this.setState({
+                    users: new Map()
+                });
+                */
+
+                /*
+               var userobj = this.state.users.get(request.window_id);
+               console.log('userobj=' + userobj);
+               if (userobj == 'undefined') userobj = new Map();
+               userobj.set('chatList', request.chatList.chatList);
+               userobj.set('isLogin', true);
+               this.setState(prevState => ({
+                 users: prevState.users.set(request.window_id, userobj)
+               }));
+               */
+
+                this.my_update_state(request.window_id, true, request.chatList.chatList, 'NO_CHANGE', 'NO_CHANGE');
+
+                /*
+                     this.setState(prevState => ({
+                         users: prevState.users.set(request.window_id, request.chatList.chatList) 
+                     }));
+                     */
+                console.log(this.state.users)
             }
         });
 
@@ -87,58 +136,75 @@ class App extends Component {
                                     chrome.notifications.clear("id");
                                 }, 2000);
                                 */ /*
-                            } else {
-                                this.setState({
-                                    isLogin: false
-                                });
-                            }
-                        });
+} else {
+this.setState({
+isLogin: false
+});
+}
+});
+}
+});
+});
+} else {
+console.log("zzy111: no weixin window");
+}
+*/
+
+        let that = this;
+        let winid_set = chrome.extension.getBackgroundPage().get_wx_winid();
+        //winid_set.forEach(function (windowId) {
+        for(var windowId of winid_set) {
+            console.log("zzy01 windowId=" + windowId);
+
+            that.check_win_id(windowId, that, function (tabid, obj) {
+                console.log("zzy00 matched" + tabid);
+                /* obj.setState({
+                    hasOpenWx: true
+                }); */
+                that.my_update_state(windowId, 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE', true);
+
+                // blreay, 主动获得chatlist
+                chrome.tabs.sendMessage(tabid, { getChatList: true }, function (response) {
+                    console.log('message has send to wxobserve.js for getChatList')
+                });
+
+                setInterval(function (e) {
+                    // 后台持续刷新列表，使得可以自动重新render
+                    chrome.tabs.sendMessage(tabid, { getChatList: true }, function (response) {
+                        console.log('message has send to wxobserve.js for getChatList in timer')
+                    });
+                }, 2000);
+
+                chrome.tabs.executeScript(tabid, {
+                    file: 'chrome/wxInfo.js'
+                }, res => {
+                    let info = res[0];
+                    if (!!info.avatar && !!info.nickname) { // 已登录，显示头像及昵称
+                        /*obj.setState({
+                            isLogin: true,
+                            userInfo: info
+                        }); */
+                        console.log("zzy700: set userinfo to " + info);
+                        console.log(info);
+                        that.my_update_state(windowId, true, 'NO_CHANGE', info, 'NO_CHANGE');
+                    } else {
+                        /*obj.setState({
+                            isLogin: false
+                        });*/
+                        that.my_update_state(windowId, false, 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE');
                     }
                 });
-            });
-        } else {
-            console.log("zzy111: no weixin window");
+            }, function () {
+                console.log("zzy111: no weixin window");
+            })
         }
-        */
+            //})
 
-        let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
-        this.check_win_id(windowId, this, function(tabid, obj){
-            console.log("zzy00 matched" + tabid);
-            obj.setState({
-                hasOpenWx: true
-            });
-
-            // blreay, 主动获得chatlist
-            chrome.tabs.sendMessage(tabid, {getChatList: true}, function(response){
-                console.log('message has send to wxobserve.js for getChatList')
-            });
-
-            setInterval(function(e){
-                // 后台持续刷新列表，使得可以自动重新render
-                chrome.tabs.sendMessage(tabid, {getChatList: true}, function(response){
-                    console.log('message has send to wxobserve.js for getChatList in timer')
-                });
-             }, 2000);
-
-            chrome.tabs.executeScript(tabid, {
-                file: 'chrome/wxInfo.js'
-            }, res => {
-                let info = res[0];
-                if (!!info.avatar && !!info.nickname) { // 已登录，显示头像及昵称
-                    obj.setState({
-                        isLogin: true,
-                        userInfo: info
-                    });
-                } else {
-                    obj.setState({
-                        isLogin: false
-                    });
-                }
-            });
-        }, function(){
-            console.log("zzy111: no weixin window");
-        })
-        //});
+            if (this.state.users.size == 0) {
+                this.my_update_state(9999, false, 'NO_CHANGE', 'NO_CHANGE', false);
+                // isLogin = false;
+            }
+    
     }
 
     //Blreay: 实验结果显示：componentWillUnmount在chrome扩展的popup页面，是没有效果的。不会被调用到，改用新的方法：
@@ -170,127 +236,140 @@ class App extends Component {
     }
     */
 
-    /*
-    sleep = (ms) =>{
-        var start=Date.now(),end = start+ms;
-        while(Date.now() < end);
-        return;
-     }
 
-     sleep2 = (timeout) => {
-        return new Promise((resolve)=>{
-          setTimeout(()=>{
-            resolve();
-          }, timeout)
-        })
-      }
-      */
+    my_update_state = (winid, isLogin, chatList, userInfo, hasOpenWx) => {
+        console.log('winid=' + winid + ' isLogin=' + isLogin + " chatList=" + chatList + ' userInfo=' + userInfo);
+        console.log(this.state.users);
+        let id = parseInt(winid);
+        var userobj = this.state.users.get(id);
+        if (typeof (userobj) == "undefined") {
+            userobj = new Map();
+            console.log('create new map object');
+        } 
+        if (isLogin != 'NO_CHANGE') userobj.set('isLogin', isLogin);
+        if (chatList != 'NO_CHANGE') userobj.set('chatList', chatList);
+        if (userInfo != 'NO_CHANGE') userobj.set('userInfo', userInfo);
+        if (hasOpenWx != 'NO_CHANGE') userobj.set('hasOpenWx', hasOpenWx);
+        /*
+        this.setState(prevState => ({
+            users: prevState.users.set(winid, userobj)
+        })); */
 
+        let a = this.state.users;
+        a.set(id, userobj);
+        console.log("dump a ");
+        console.log(a);
+        this.setState({
+            hasOpenWx: true
+        });
+        /*
+        this.setState(prevState => {
+            let old = Object.assign({}, prevState.users);  // creating copy of state variable jasper
+            console.log('typeof old is ' + typeof(old));
+            old.set(winid, userobj);
+            console.log(old);
+            return { old };
+        })*/
+        console.log("dump state ");
+        console.log(this.state);
+    }
     check_win_id = (winid, obj, ok_func, ng_func) => {
-        try{
+        try {
             chrome.windows.get(winid, {
                 populate: true,
-                windowTypes: [ 'popup' ]
+                windowTypes: ['popup']
             }, (win) => {
-                win.tabs.forEach(tab => {
-                    // console.log("zzy100 check_win_id: " + tab.url);
-                    if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
-                        console.log("zzy00 url matched: " + tab.url);
-                        ok_func(tab.id, obj);
-                    } else {
-                        ng_func();
-                    }
-                });
+                if (chrome.runtime.lastError) {
+                    // Something went wrong
+                    console.warn("zzy502 Whoops.. " + chrome.runtime.lastError.message);
+                    // Maybe explain that to the user too?
+                    ng_func();
+                } else {
+                    // No errors, you can use entry
+                    win.tabs.forEach(tab => {
+                        console.log("zzy100 check_win_id url: " + tab.url);
+                        if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
+                            console.log("zzy00 url matched: " + tab.url);
+                            ok_func(tab.id, obj);
+                        } else {
+                            // tab.url可能是空的，刚刚创建完的window.
+                            console.log("zzy00 url NOT matched: TODO, but still call ok_func() " + tab.url);
+                            //ng_func();
+                            ok_func(tab.id, obj);
+                        }
+                    });
+                }
             });
-        } catch(e) {
+        } catch (e) {
             console.error('Chrome extension, winid seems invalid:' + winid);
             console.log(e);
             ng_func();
         }
     }
 
-    viewWx = () => {
-        /*
-        let windowId = null;
-        chrome.windows.getAll({
-            populate: true
-        }, function (windows) {
-            windows.forEach(function (win) {
-                if (win.tabs.length) {
-                    win.tabs.forEach(function (tab) {
-                        if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
-                            windowId = tab.windowId;
-                        }
+    viewWx = (winid) => {
+        // let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
+        let windowId = winid;
+        let that = this;
+        
+        this.check_win_id(windowId, this, function (tabid, obj) {
+            chrome.windows.update(windowId, { focused: true });
+        }, function () {
+            console.log("zzy130 create new window");
+            let isPrivate = false;
+            if (winid == 'private') { isPrivate = true;}
+            chrome.windows.create({
+                url: 'https://wx2.qq.com',
+                type: 'popup',
+                incognito: isPrivate,
+                left: 300,
+                focused: true
+            }, function (w) {
+                // w is the window object
+                console.log(w);
+                // notify background.js the new window's ID
+
+                var bg = chrome.extension.getBackgroundPage();
+                bg.set_wx_winid(w.id); // 访问bg的函数
+
+                that.check_win_id(w.id, that, function (tabid, obj) {
+
+                    // w.tabs.forEach(tab => {
+                    console.log("zzy100 check_win_id: " + w.id + " tabid: " + tabid);
+
+                    // set winid to wx page
+                    chrome.tabs.executeScript(tabid, {
+                        code: " \
+                                console.log('zzy500: im runned'); \
+                                var tag='body'; \
+                                var node = document.getElementsByTagName(tag)[0]; \
+                                var paramsContainer = document.createElement('div'); \
+                                paramsContainer.style.display = 'none'; \
+                                paramsContainer.setAttribute('id', 'blreay_paramsContainer'); \
+                                paramsContainer.setAttribute('blreay_winid', " + w.id + "); \
+                                node.appendChild(paramsContainer); \
+                                console.log('winid is set to: ' + document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid')); \
+                                "
+                    }, res => {
+                        let info = res[0];
+                        console.log(info);
                     });
-                }
+
+                }, function () {
+                    console.log("window is not valid, error occured");
+                })
             });
-            */
-            /*
-            var winIsValid = false;
 
-            chrome.windows.get(winid, {
-                populate: true,
-                windowTypes: [ 'popup' ]
-            }, (win) => {
-                win.tabs.forEach(tab => {
-                        console.log("zzy100: " + tab.url);
-                        if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
-                            winIsValid = true;
-                            console.log("zzy00 matched" + tab.url);
-                        }
-                    });
-                });
-                */
-
-            let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
-            this.check_win_id(windowId, this, function(tabid, obj){
-                chrome.windows.update(windowId, {focused: true});
-            }, function(){
-                chrome.windows.create({
-                    url: 'https://wx2.qq.com',
-                    type: 'popup',
-                    focused: true
-                }, function (w) {
-                    // w is the window object
-                    console.log(w);
-                    // notify background.js the new window's ID
-
-                    var bg = chrome.extension.getBackgroundPage();
-                    bg.set_wx_winid(w.id); // 访问bg的函数
-
-                    //blreay: donnot close the popup win so that you can click the next msg convinently.
-                    //TODO: add option to control this behavior
-                    //window.close();
-                });
-            })
-            /*
-            if (this.check_win_id(winid)) {
-                chrome.windows.update(windowId, {focused: true});
-                //blreay: donnot close the popup win so that you can click the next msg convinently.
-                //TODO: add option to control this behavior
-                //window.close();
-            } else {
-                chrome.windows.create({
-                    url: 'https://wx2.qq.com',
-                    type: 'popup',
-                    focused: true
-                }, function (w) {
-                    // w is the window object
-                    console.log(w);
-                    // notify background.js the new window's ID
-
-                    var bg = chrome.extension.getBackgroundPage();
-                    bg.set_wx_winid(w.id); // 访问bg的函数
-
-                    //blreay: donnot close the popup win so that you can click the next msg convinently.
-                    //TODO: add option to control this behavior
-                    //window.close();
-                });
-            } */
-        // });
+            //blreay: donnot close the popup win so that you can click the next msg convinently.
+            //TODO: add option to control this behavior
+            //window.close();
+        }, function () {
+            console.log("zzy501 window is not valid, error occured");
+        });
     }
+    //}
 
-    activeChat = (username) => {
+    activeChat = (winid, username) => {
         /*
         chrome.windows.getAll({
             populate: true
@@ -312,17 +391,18 @@ class App extends Component {
         });
         */
 
-        let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
-        this.check_win_id(windowId, this, function(tabid, obj){
+        // let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
+        let windowId = winid;
+        this.check_win_id(windowId, this, function (tabid, obj) {
             obj.setState({
                 hasOpenWx: true
             });
 
-            chrome.tabs.sendMessage(tabid, {username: username}, function(response){
-                console.log('message has send to wxobserve.js for username')
+            chrome.tabs.sendMessage(tabid, { username: username }, function (response) {
+                console.log('message has send to wxobserve.js for username:' + username);
             });
-            obj.viewWx();
-        }, function(){
+            obj.viewWx(windowId);
+        }, function () {
             console.log("winid invalid");
         })
     }
@@ -350,33 +430,38 @@ class App extends Component {
         */
 
         let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
-        this.check_win_id(windowId, this, function(tabid, obj){
+        this.check_win_id(windowId, this, function (tabid, obj) {
             obj.setState({
                 hasOpenWx: true
             });
 
-            chrome.tabs.sendMessage(tabid, {loginout: true}, function(response){
+            chrome.tabs.sendMessage(tabid, { loginout: true }, function (response) {
                 console.log('message has send to wxobserve.js')
             });
             window.close();
-        }, function(){
+        }, function () {
             console.log("winid invalid");
         })
     }
 
-    _renderLogo = () => {
-        const {isLogin} = this.state;
+    _renderLogo = (winid) => {
+        const isLogin = this.state.users.get(winid).get('isLogin');
+        console.log('in _renderLogo, isLogin=' + isLogin);
         return (
             isLogin ? null : (
                 <div className="wxLogo">
-                    <img src={ require('./img/wx.jpg') } alt='' style={{width: '100%', verticalAlign: 'top'}}/>
+                    <img src={require('./img/wx.jpg')} alt='' style={{ width: '100%', verticalAlign: 'top' }} />
                 </div>
             )
         )
     }
 
-    _renderUserInfo = () => {
-        const {isLogin, userInfo} = this.state;
+    _renderUserInfo = (winid) => {
+        // const { isLogin, userInfo } = this.state;
+        const isLogin = this.state.users.get(winid).get('isLogin');
+        const userInfo = this.state.users.get(winid).get('userInfo');
+        console.log('in _renderUserInfo, isLogin=' + isLogin + ' userInfo=' + userInfo);
+        console.log(userInfo);
         return (
             (isLogin && !!userInfo) ? (
                 <MuiThemeProvider>
@@ -384,12 +469,13 @@ class App extends Component {
                         <ListItem
                             disabled={true}
                             leftAvatar={
-                                <Avatar src={ userInfo.avatar } />
+                                <Avatar src={userInfo.avatar} />
                             }
                         >
                             <div className="nickname" style={{ position: 'relative' }}>
-                                { userInfo.nickname }
-                                <span className="loginout" onClick={this.loginout}>退出</span>
+                                {userInfo.nickname}
+                                <span className="private" onClick={() => {this.viewWx('private')}}>New</span>
+                                <span className="loginout" onClick={() => {this.viewWx(winid)}}>退出</span>
                             </div>
                         </ListItem>
                     </List>
@@ -399,7 +485,7 @@ class App extends Component {
     }
 
     _renderUnRead = () => {
-        const {isLogin, userInfo} = this.state;
+        const { isLogin, userInfo } = this.state;
         if (!isLogin) {
             return null;
         } else {
@@ -413,46 +499,48 @@ class App extends Component {
             }
             return (
                 <div className="unread">
-                    <span className="unread-num">{ readStr }</span>
-                    <span className="view" onClick={this.viewWx} style={{ 'display': userInfo.unreadCount ? 'inline-block' : 'none' }}>查看></span>
+                    <span className="unread-num">{readStr}</span>
+                    <span className="view" onClick={() => {this.viewWx('NO_VAL')}} style={{ 'display': userInfo.unreadCount ? 'inline-block' : 'none' }}>查看></span>
                 </div>
             )
         }
     }
 
-    _renderButton = () => {
-        const { isLogin } = this.state;
+    _renderButton = (winid) => {
+        // const { isLogin } = this.state;
+        const isLogin = this.state.users.get(winid).get('isLogin');
+        console.log('in _renderButton, isLogin=' + isLogin + ' userInfo=' + 'xxx');
+
         return (
             <div style={{ borderTop: '1px solid rgba(255, 255, 255, .4)' }}>
                 <MuiThemeProvider>
-                    <FlatButton label={ isLogin ? '进入完整版' : '登录' }
-                                fullWidth={true}
-                                labelStyle={{ color: '#fff' }}
-                                onClick={this.viewWx}
+                    <FlatButton label={isLogin ? '进入完整版' : '登录'}
+                        fullWidth={true}
+                        labelStyle={{ color: '#fff' }}
+                        onClick={() => {this.viewWx(winid)}}
                     />
                 </MuiThemeProvider>
             </div>
         )
     }
 
-    _renderChatList = () => {
-        const {isLogin, userInfo, chatList} = this.state;
+    _renderChatList = (winid) => {
+        //const { isLogin, userInfo, chatList } = this.state;
+        const isLogin = this.state.users.get(winid).get('isLogin');
+        const userInfo = this.state.users.get(winid).get('userInfo');
+        const chatList = this.state.users.get(winid).get('chatList');
+        console.log('in _renderChatList, isLogin=' + isLogin + ' userInfo=' + userInfo + ' chatList=' + chatList);
+        console.log(chatList);
+
         if (!isLogin) {
             return null;
         } else {
-            /*
-            while(!chatList.length) {
-                this.sleep2(1);
-                console.log("zzy500: sleep to wait data");
-            };
-            */
-
-            if (!chatList.length) {
+            if (typeof(chatList) == 'undefined' || !chatList.length) {
                 return (
                     <MuiThemeProvider>
-                        <div style={{textAlign: 'center'}}>
+                        <div style={{ textAlign: 'center' }}>
                             <CircularProgress />
-                            <div style={{fontSize: '12px', paddingBottom: '10px'}}>未读消息列表获取中...</div>
+                            <div style={{ fontSize: '12px', paddingBottom: '10px' }}>未读消息列表获取中...</div>
                         </div>
                     </MuiThemeProvider>
                 )
@@ -471,10 +559,10 @@ class App extends Component {
                                 return true;
                               }).map((item, idx) => {
                                 */
-                                // arrayObj = Array.from(chatList);
-                                //arrayObj.sort(function(a,b) {return a.NoticeCount - b.NoticeCount});
+                            // arrayObj = Array.from(chatList);
+                            //arrayObj.sort(function(a,b) {return a.NoticeCount - b.NoticeCount});
 
-                                chatList.map((item, idx) => {
+                            chatList.map((item, idx) => {
                                 // arrayObj.forEach((item,index) => {
                                 return (
                                     <div key={idx}>
@@ -482,60 +570,60 @@ class App extends Component {
                                             leftAvatar={
                                                 !!item.NoticeCount != 0 ?
                                                     item.MMInChatroom && item.Statues == 0 ? (
-                                                    <Badge
-                                                        style={{ top: '-2px', left: '4px' }}
-                                                        badgeContent={'zzy'}
-                                                        secondary={true}
-                                                        badgeStyle={{
-                                                            top: 20,
-                                                            right: 20,
-                                                            width: '12px',
-                                                            height: '12px',
-                                                            fontSize: '10px',
-                                                            backgroundColor: '#d44139'
-                                                        }}
-                                                    >
+                                                        <Badge
+                                                            style={{ top: '-2px', left: '4px' }}
+                                                            badgeContent={'zzy'}
+                                                            secondary={true}
+                                                            badgeStyle={{
+                                                                top: 20,
+                                                                right: 20,
+                                                                width: '12px',
+                                                                height: '12px',
+                                                                fontSize: '10px',
+                                                                backgroundColor: '#d44139'
+                                                            }}
+                                                        >
+                                                            <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge
+                                                            style={{ top: '-2px', left: '4px' }}
+                                                            badgeContent={item.NoticeCount}
+                                                            secondary={true}
+                                                            badgeStyle={{
+                                                                width: 16,
+                                                                height: 16,
+                                                                top: 20,
+                                                                right: 20,
+                                                                backgroundColor: '#d44139'
+                                                            }}
+                                                        >
+                                                            <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                        </Badge>
+                                                    )
+                                                    : (
                                                         <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge
-                                                        style={{ top: '-2px', left: '4px' }}
-                                                        badgeContent={item.NoticeCount}
-                                                        secondary={true}
-                                                        badgeStyle={{
-                                                            width: 16,
-                                                            height: 16,
-                                                            top: 20,
-                                                            right: 20,
-                                                            backgroundColor: '#d44139'
-                                                        }}
-                                                    >
-                                                        <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
-                                                    </Badge>
-                                                )
-                                             : (
-                                                    <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
 
-                                                )
+                                                    )
                                             }
                                             primaryText={
                                                 <div className="chatNickName">
-                                                    { item.NickName }
+                                                    {item.NickName}
                                                     {
-                                                        !!item.MMDigestTime ? <span className="time">{ item.MMDigestTime }</span> : null
+                                                        !!item.MMDigestTime ? <span className="time">{item.MMDigestTime}</span> : null
                                                     }
                                                 </div>
                                             }
                                             secondaryText={
                                                 <p>
-                                                    <span style={{color: '#989898', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block'}}>
+                                                    <span style={{ color: '#989898', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                                                         {!!item.NoticeCount && item.MMInChatroom && item.Statues == 0 ? `[${item.NoticeCount}条]${item.MMDigest}` : item.MMDigest}
                                                     </span>
                                                 </p>
                                             }
                                             secondaryTextLines={1}
                                             onClick={() => {
-                                                this.activeChat(item.UserName);
+                                                this.activeChat(winid, item.UserName);
                                                 //new Notification("ChromePluginNotify",{icon:"images/30.png",body:"这是一个谷歌浏览器的通知"});
                                                 /*
                                                 chrome.notifications.create("id", {	
@@ -547,7 +635,7 @@ class App extends Component {
                                                 */
                                             }}
                                         />
-                                        <Divider inset={true} style={{backgroundColor: '#292c33'}} />
+                                        <Divider inset={true} style={{ backgroundColor: '#5f9ea0' }} />
                                     </div>
                                 )
                             })
@@ -557,20 +645,55 @@ class App extends Component {
             )
         }
     }
+    /*
+                {this._renderLogo()}
+                {this._renderUserInfo()}
+                {this._renderChatList()}
+                {this._renderButton()}
+                { this._renderUnRead()}
 
-    render () {
-        const { isLogin } = this.state;
+                {this._renderLogo()}
+                {this._renderUserInfo()}
+                {this._renderChatList()}
+                {this._renderButton()} 
+
+                */
+
+    render() {
+        //  const { isLogin } = this.state;
+        var isLogin = true;
+        var rows = [];
+        console.log(this.state);
+        console.log("size = " + this.state.users.size);
+        if(this.state.users.has(9999)) {
+            isLogin = false;
+        }
         return (
             <div className="wrap">
                 {
                     isLogin ? null : (<h2 className="title">欢迎使用微信网页版超级扩展</h2>)
                 }
 
-                { this._renderLogo() }
-                { this._renderUserInfo() }
-                { this._renderChatList() }
-                { this._renderButton() }
-                { /* this._renderUnRead() */}
+
+                {
+                    this.state.users.forEach((v, k) => {
+                        console.log("print user obj k=" + k);
+                        console.log(v);
+                        //return this._renderLogo(k) + this._renderUserInfo(k) + this._renderChatList(k) + this._renderButton(k);
+                        rows.push(this._renderLogo(k));
+                        rows.push(this._renderUserInfo(k));
+                        rows.push(this._renderChatList(k));
+                        rows.push(this._renderButton(k));
+                    })
+                    
+                    //rows.push(<h2 className="title">欢迎使用微信网页版超级扩展</h2>);
+
+                }
+
+                {this.state.users.delete(9999) }
+
+                {rows}
+
             </div>
         );
     }
