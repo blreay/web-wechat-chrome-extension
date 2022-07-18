@@ -152,12 +152,14 @@ console.log("zzy111: no weixin window");
 
         let that = this;
         let winid_set = chrome.extension.getBackgroundPage().get_wx_winid();
+        console.log("get_wx_winid return: " + winid_set.keys());
         //winid_set.forEach(function (windowId) {
-        for(var windowId of winid_set) {
+        // for(var windowId of winid_set) {
+        for (var windowId of winid_set.keys()) {
             console.log("zzy01 windowId=" + windowId);
 
             that.check_win_id(windowId, that, function (tabid, obj) {
-                console.log("zzy00 matched" + tabid);
+                console.log("zzy00 matched tabid=" + tabid + ' winid=' + windowId);
                 /* obj.setState({
                     hasOpenWx: true
                 }); */
@@ -179,32 +181,33 @@ console.log("zzy111: no weixin window");
                     file: 'chrome/wxInfo.js'
                 }, res => {
                     let info = res[0];
+                    console.log(info);
                     if (!!info.avatar && !!info.nickname) { // 已登录，显示头像及昵称
                         /*obj.setState({
                             isLogin: true,
                             userInfo: info
                         }); */
-                        console.log("zzy700: set userinfo to " + info);
-                        console.log(info);
+                        console.log("zzy700: set userinfo to " + info + "for window_id=" + windowId);
                         that.my_update_state(windowId, true, 'NO_CHANGE', info, 'NO_CHANGE');
                     } else {
                         /*obj.setState({
                             isLogin: false
                         });*/
+                        console.log("zzy701: set userinfo to " + info + "for window_id=" + windowId);
                         that.my_update_state(windowId, false, 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE');
                     }
                 });
             }, function () {
-                console.log("zzy111: no weixin window");
+                console.log("zzy111: no weixin window=" + windowId);
             })
         }
-            //})
+        //})
 
-            if (this.state.users.size == 0) {
-                this.my_update_state(9999, false, 'NO_CHANGE', 'NO_CHANGE', false);
-                // isLogin = false;
-            }
-    
+        if (this.state.users.size == 0) {
+            this.my_update_state(9999, false, 'NO_CHANGE', 'NO_CHANGE', false);
+            // isLogin = false;
+        }
+
     }
 
     //Blreay: 实验结果显示：componentWillUnmount在chrome扩展的popup页面，是没有效果的。不会被调用到，改用新的方法：
@@ -245,7 +248,7 @@ console.log("zzy111: no weixin window");
         if (typeof (userobj) == "undefined") {
             userobj = new Map();
             console.log('create new map object');
-        } 
+        }
         if (isLogin != 'NO_CHANGE') userobj.set('isLogin', isLogin);
         if (chatList != 'NO_CHANGE') userobj.set('chatList', chatList);
         if (userInfo != 'NO_CHANGE') userobj.set('userInfo', userInfo);
@@ -311,13 +314,13 @@ console.log("zzy111: no weixin window");
         // let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
         let windowId = winid;
         let that = this;
-        
+
         this.check_win_id(windowId, this, function (tabid, obj) {
             chrome.windows.update(windowId, { focused: true });
         }, function () {
             console.log("zzy130 create new window");
             let isPrivate = false;
-            if (winid == 'private') { isPrivate = true;}
+            if (winid == 'private') { isPrivate = true; }
             chrome.windows.create({
                 url: 'https://wx2.qq.com',
                 type: 'popup',
@@ -330,12 +333,13 @@ console.log("zzy111: no weixin window");
                 // notify background.js the new window's ID
 
                 var bg = chrome.extension.getBackgroundPage();
-                bg.set_wx_winid(w.id); // 访问bg的函数
+                // bg.set_wx_winid(w.id); // 访问bg的函数
 
                 that.check_win_id(w.id, that, function (tabid, obj) {
 
                     // w.tabs.forEach(tab => {
                     console.log("zzy100 check_win_id: " + w.id + " tabid: " + tabid);
+                    bg.set_wx_winid(w.id, tabid);
 
                     // set winid to wx page
                     chrome.tabs.executeScript(tabid, {
@@ -352,6 +356,7 @@ console.log("zzy111: no weixin window");
                                 "
                     }, res => {
                         let info = res[0];
+                        console.log("zzy500-1: result: " + info);
                         console.log(info);
                     });
 
@@ -474,8 +479,8 @@ console.log("zzy111: no weixin window");
                         >
                             <div className="nickname" style={{ position: 'relative' }}>
                                 {userInfo.nickname}
-                                <span className="private" onClick={() => {this.viewWx('private')}}>New</span>
-                                <span className="loginout" onClick={() => {this.viewWx(winid)}}>退出</span>
+                                <span className="private" onClick={() => { this.viewWx('private') }}>New</span>
+                                <span className="loginout" onClick={() => { this.viewWx(winid) }}>退出</span>
                             </div>
                         </ListItem>
                     </List>
@@ -500,7 +505,7 @@ console.log("zzy111: no weixin window");
             return (
                 <div className="unread">
                     <span className="unread-num">{readStr}</span>
-                    <span className="view" onClick={() => {this.viewWx('NO_VAL')}} style={{ 'display': userInfo.unreadCount ? 'inline-block' : 'none' }}>查看></span>
+                    <span className="view" onClick={() => { this.viewWx('NO_VAL') }} style={{ 'display': userInfo.unreadCount ? 'inline-block' : 'none' }}>查看></span>
                 </div>
             )
         }
@@ -517,7 +522,7 @@ console.log("zzy111: no weixin window");
                     <FlatButton label={isLogin ? '进入完整版' : '登录'}
                         fullWidth={true}
                         labelStyle={{ color: '#fff' }}
-                        onClick={() => {this.viewWx(winid)}}
+                        onClick={() => { this.viewWx(winid) }}
                     />
                 </MuiThemeProvider>
             </div>
@@ -535,7 +540,7 @@ console.log("zzy111: no weixin window");
         if (!isLogin) {
             return null;
         } else {
-            if (typeof(chatList) == 'undefined' || !chatList.length) {
+            if (typeof (chatList) == 'undefined' || !chatList.length) {
                 return (
                     <MuiThemeProvider>
                         <div style={{ textAlign: 'center' }}>
@@ -665,7 +670,7 @@ console.log("zzy111: no weixin window");
         var rows = [];
         console.log(this.state);
         console.log("size = " + this.state.users.size);
-        if(this.state.users.has(9999)) {
+        if (this.state.users.has(9999)) {
             isLogin = false;
         }
         return (
@@ -685,12 +690,12 @@ console.log("zzy111: no weixin window");
                         rows.push(this._renderChatList(k));
                         rows.push(this._renderButton(k));
                     })
-                    
+
                     //rows.push(<h2 className="title">欢迎使用微信网页版超级扩展</h2>);
 
                 }
 
-                {this.state.users.delete(9999) }
+                {this.state.users.delete(9999)}
 
                 {rows}
 

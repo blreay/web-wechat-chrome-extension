@@ -13,12 +13,13 @@ var timeid;
 var g_unread = 0;
 
 winid_set = new Set();
+winid_map = new Map();
 
 check_win_id = (winid, obj, ok_func, ng_func) => {
-    try{
+    try {
         chrome.windows.get(winid, {
             populate: true,
-            windowTypes: [ 'popup' ]
+            windowTypes: ['popup']
         }, (win) => {
             win.tabs.forEach(tab => {
                 // console.log("zzy100 check_win_id: " + winid + " url: " + tab.url);
@@ -33,7 +34,7 @@ check_win_id = (winid, obj, ok_func, ng_func) => {
 
             });
         });
-    } catch(e) {
+    } catch (e) {
         console.error('Chrome extension, winid seems invalid:' + winid);
         console.log(e);
         ng_func();
@@ -44,15 +45,23 @@ check_win_id = (winid, obj, ok_func, ng_func) => {
 //Blreay: 当用户不小心点击了鼠标或者离开了扩展的popup页面，此时需要对一些数据进行清空或者删除一些不必要的数据.
 // 在background环境注册断开连接时需要处理的方法: https://www.jianshu.com/p/ff8c15e8d88e
 chrome.runtime.onConnect.addListener(function (externalPort) {
-    externalPort.onDisconnect.addListener(function() {
+    externalPort.onDisconnect.addListener(function () {
         var ignoreError = chrome.runtime.lastError;
         console.log("zzy200: onDisconnect tabid=" + state.tabid);
-        // 发送消失，把焦点设置为无效
-        if (state.tabid) {
-            chrome.tabs.sendMessage(state.tabid, {blur: true}, function(response){
-                console.log('message has send to wxobserve.js for blurpage, tabid=' + state.tabid);
-            });
+
+        values = winid_map.values();
+        for (i = 0; i < winid_map.size; i++) {
+            value = values.next().value;
+            // info.unreadCount += value.unReadCount.unReadCount;
+            console.log("zzy111 send blur " + value.window_id + "  tabid=" + value.tabid);
+            // 发送消失，把焦点设置为无效
+            if (value.tabid) {
+                chrome.tabs.sendMessage(value.tabid, { blur: true }, function (response) {
+                    console.log('message has send to wxobserve.js for blurpage, tabid=' + value.tabid);
+                });
+            }
         }
+
     });
 });
 
@@ -71,6 +80,8 @@ chrome.runtime.onMessage.addListener((request) => {
         console.log(request);
         state.unRead = request.unReadCount.unReadCount;
         state.nickname = request.unReadCount.nickname;
+        let cur_winid = parseInt(request.window_id)
+
         //console.log("zzy03 unread = " + state.unRead);
         if (state.unread != 0) {
             g_unread = state.unread;
@@ -86,36 +97,54 @@ chrome.runtime.onMessage.addListener((request) => {
             g_unread = 0;
         }
 
-        check_win_id(state.winid, null, function(tabid, obj) {
+        check_win_id(cur_winid, null, function (tabid, obj) {
+            request.tabid = tabid;
+            winid_map.set(cur_winid, request);
             chrome.tabs.executeScript(tabid, {
                 file: 'chrome/wxInfo.js'
             }, function (res) {
                 var info = res[0];
+                /*
                 if(info.nickname != state.nickname) {
                     console.log("received an invalid msg from nickname=" + state.nickname + ", expected nickname=" + info.nickname + ", ignore it");
                     return;
                 }
+                */
+                // calculate total unread
+                info.unreadCount = 0;
+                values = winid_map.values();
+                for (i = 0; i < winid_map.size; i++) {
+                    value = values.next().value;
+                    info.unreadCount += value.unReadCount.unReadCount;
+                    console.log("zzy109 " + value.window_id + "  count=" + value.unReadCount.unReadCount + " total=" + info.unreadCount);
+                }
                 if (info.login) { // 已登录
-                    info.unreadCount = state.unRead;
+                    // info.unreadCount = state.unRead;
                     console.log('zzy004: get new unread count = ' + info.unreadCount);
                     if (+info.unreadCount) {
-                        chrome.browserAction.setBadgeText({text: info.unreadCount + ''});
+                        chrome.browserAction.setBadgeText({ text: info.unreadCount + '' });
                         if (info.unreadCount < 99) {
-                            chrome.browserAction.setBadgeText({text: info.unreadCount + ''});
+                            chrome.browserAction.setBadgeText({ text: info.unreadCount + '' });
                         } else if (info.unreadCount >= 99) {
-                            chrome.browserAction.setBadgeText({text: '99+'});
+                            chrome.browserAction.setBadgeText({ text: '99+' });
                         }
                     } else {
-                        chrome.browserAction.setBadgeText({text: ''});
+                        chrome.browserAction.setBadgeText({ text: '' });
                     }
                 } else {
-                    chrome.browserAction.setBadgeText({text: ''});
+                    chrome.browserAction.setBadgeText({ text: info.unreadCount + '' });
+                    console.log("zzy119 OMG info.login is false, but got unreadcound, now  info.unreadCount = " + info.unreadCount);
                 }
             });
-        }, function() {
+        }, function () {
             console.log("winid is invalid");
         })
     };
+    if (request.broadcast_winid) {
+        console.log("broadcast_winid from " + request.broadcast_winid);
+        broadcast_winid(request.broadcast_winid);
+    }
+
 
     //Blreay: donot response this message
     /*
@@ -131,26 +160,63 @@ chrome.runtime.onMessage.addListener((request) => {
                 unread += item.NoticeCount;
                 console.log("zzy01 unread = " + unread);
             }
-        　});
+         });
     }
     */
 });
 
-var set_wx_winid = function(id) {
-    state.winid = id
-    winid_set.add(id);
-    console.log("zzy110: weixin windowid is set to " + state.winid);
+var set_wx_winid = function (id, tabid) {
+    //state.winid = id;
+    var request = new Object();
+    request.tabid = tabid;
+    request.window_id = id;
+    winid_map.set(id, request);
+    //winid_set.add(id);
+    console.log("zzy110: weixin windowid is added to map: " + id);
 }
 
-var get_wx_winid = function() {
-    console.log("zzy111: weixin windowid is returned with  " + winid_set.keys());
-    console.log(winid_set);
-    return winid_set;
+var get_wx_winid = function () {
+    console.log("zzy111: weixin windowid is returned with  " + winid_map.keys());
+    console.log(winid_map);
+    return winid_map;
+}
+
+var broadcast_winid = function (str) {
+    console.log("zzy111: broadcast_winid is called by " + str);
+
+    values = winid_map.values();
+    for (i = 0; i < winid_map.size; i++) {
+        value = values.next().value;
+
+        var tabid = value.tabid;
+        var winid = value.window_id;
+        console.log("zzy112 " + value.window_id + "  tabid=" + tabid + " run executeScript");
+        // set winid to wx page
+        chrome.tabs.executeScript(tabid, {
+            code: " \
+                console.log('zzy500: im runned'); \
+                var tag='body'; \
+                var node = document.getElementsByTagName(tag)[0]; \
+                var paramsContainer = document.createElement('div'); \
+                paramsContainer.style.display = 'none'; \
+                paramsContainer.setAttribute('id', 'blreay_paramsContainer'); \
+                paramsContainer.setAttribute('blreay_winid', " + winid + "); \
+                node.appendChild(paramsContainer); \
+                console.log('winid is set to: ' + document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid')); \
+                "
+        }, res => {
+            let info = res[0];
+            console.log("zzy500-1: executeScript result: " + info);
+            console.log(info);
+        });
+    }
+
+    return;
 }
 
 var open_wx = function () {
-    chrome.browserAction.setBadgeText({text: ''});
-    chrome.browserAction.setBadgeBackgroundColor({color: '#ea594b'});
+    chrome.browserAction.setBadgeText({ text: '' });
+    chrome.browserAction.setBadgeBackgroundColor({ color: '#ea594b' });
 
     chrome.runtime.onMessage.addListener(function (req) {
         if (req.update) {

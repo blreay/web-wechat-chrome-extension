@@ -2,30 +2,30 @@ let resetTime = 60 * 1000 * 2;
 let isLost = false;
 let resetTimer = null;
 let currentWinID = null;
-
+let g_cur_winid = null;
 
 // currentWinID = window.id;
 // console.log('zzy100: wxobserve.js is loaded, current_window_id=' + currentWinID);
 
 /*
 chrome.windows.getCurrent(function (currentWindow) {
-	console.log('当前窗口ID：' + currentWindow.id);
+    console.log('当前窗口ID：' + currentWindow.id);
     currentWinID = currentWindow.id;
 });
 */
 
-window.id
+console.log("zzy601: wxobserve.js is inited");
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
 
-    window.addEventListener('blur', function() {
+    window.addEventListener('blur', function () {
         // focusLost reset chat item
         // isLost = true;
         // resetTimer = setTimeout(() => {
         //     injectScript(chrome.extension.getURL('chrome/blurPage.js'), 'body');
         // }, resetTime);
     });
-    window.addEventListener('focus', function() {
+    window.addEventListener('focus', function () {
         // if (resetTimer) {
         //     resetTimer = null;
         //     isLost = false;
@@ -34,22 +34,34 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // popup通知content script才去拿数据
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         if (request.getChatList) {
-            console.log('zzy100: injectScript for catchChatList');
-            var winid = document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid');
-            injectScript(chrome.extension.getURL('chrome/catchChatList.js'), 'body');
-            // fix bug: message is received multiple times
-            // https://zhuanlan.zhihu.com/p/144330696?from_voters_page=true
-            // window.addEventListener("message", function(e) {
-            window.onmessage = function(e){
-                console.log('收到了来自inject script的信息(chrome/catchChatList.js):')
-                // console.log(e)
-                // console.log(e.data.data);
-                // 将inject script拿到的数据发给popup展示
-                chrome.runtime.sendMessage({chatList: e.data.data, window_id: winid});
-            };
-            //}, false);
+            try {
+                console.log('zzy100: injectScript for catchChatList');
+                if (g_cur_winid) {
+
+                } else {
+                    g_cur_winid = document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid');
+                }
+
+                injectScript(chrome.extension.getURL('chrome/catchChatList.js'), 'body');
+                // fix bug: message is received multiple times
+                // https://zhuanlan.zhihu.com/p/144330696?from_voters_page=true
+                // window.addEventListener("message", function(e) {
+                window.onmessage = function (e) {
+                    console.log('收到了来自inject script的信息(chrome/catchChatList.js):')
+                    // console.log(e)
+                    // console.log(e.data.data);
+                    // 将inject script拿到的数据发给popup展示
+                    chrome.runtime.sendMessage({ chatList: e.data.data, window_id: winid });
+                };
+                //}, false);
+            } catch (e) {
+                console.log("zzy109: exception occured: " + e.message)
+                console.log(e);
+                // chrome.extension.getBackgroundPage().broadcast_winid("aaa");
+                chrome.runtime.sendMessage({ broadcast_winid: "aaa", window_id: 000 });
+            }
             return;
         }
 
@@ -75,22 +87,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     //Blreay: 后台持续往前台发送未读信息数量，显示在右上角, 间隔10s
     //本来是持续发全部的chatlist, 但是发现很占CPU，而且运行一会儿会内存不足异常退出。
-    setInterval(function(e){
+    setInterval(function (e) {
         // 后台发送unread message count
         // console.log('zzy102: injectScript for chrome/getUnreadCount.js');
-        var winid = document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid');
-        console.log("zzy600: winid from blreay_paramsContainer.blreay_winid = " + winid);
-        injectScript(chrome.extension.getURL('chrome/getUnreadCount.js'), 'body');
-        // fix bug: message is received multiple times
-        // https://zhuanlan.zhihu.com/p/144330696?from_voters_page=true
-        window.onmessage = function(e){
-            console.log('zzy100: 收到了来自inject script的信息(chrome/getUnreadCount.js):')
-            // console.log(e)
-            // console.log(e.data.data);
-            // 将inject script拿到的数据发给popup展示
-            chrome.runtime.sendMessage({unReadCount: e.data.data, window_id: winid});
-        };
-        }, 10000);
+        try {
+            if (g_cur_winid) {
+            } else {
+                g_cur_winid = document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid');
+            }
+            winid = g_cur_winid;
+            console.log("zzy600: winid from blreay_paramsContainer.blreay_winid = " + winid);
+            injectScript(chrome.extension.getURL('chrome/getUnreadCount.js'), 'body');
+            // fix bug: message is received multiple times
+            // https://zhuanlan.zhihu.com/p/144330696?from_voters_page=true
+            window.onmessage = function (e) {
+                console.log('zzy100: 收到了来自inject script的信息(chrome/getUnreadCount.js):')
+                // console.log(e)
+                // console.log(e.data.data);
+                // 将inject script拿到的数据发给popup展示
+                chrome.runtime.sendMessage({ unReadCount: e.data.data, window_id: winid });
+            };
+        } catch (e) {
+            console.log("zzy110: exception occured: " + e.message)
+            console.log(e);
+            // chrome.extension.getBackgroundPage().broadcast_winid("aaa");
+            chrome.runtime.sendMessage({ broadcast_winid: "bbb", window_id: '000' });
+        }
+    }, 10000);
 
 
     let NEWEST = new Date().getTime();
@@ -100,7 +123,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (now - NEWEST > 5000) {
             NEWEST = now;
             try {
-                chrome.runtime.sendMessage({update: true});
+                chrome.runtime.sendMessage({ update: true });
+
+                if (!g_cur_winid) {
+                    chrome.runtime.sendMessage({ broadcast_winid: "ccc", window_id: '000' });
+                }
 
                 // Blreay, get unreadcount，这种方法会导致丢消息，原因未知，可能和message机制有关系
                 // now, use setInterval to register a callback function to run getUnreadCount.js
@@ -138,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ) {
                     console.error('Chrome extension, Actson has been reloaded. Please refresh the page');
                 } else {
-                    throw(e);
+                    throw (e);
                 }
             }
         }
@@ -154,7 +181,7 @@ function injectScript(file_path, tag, params) {
     var script = document.createElement('script');
     script.setAttribute('type', 'text/javascript');
     script.setAttribute('src', file_path);
-    script.onload = function() {
+    script.onload = function () {
         if (document.getElementById('paramsContainer')) {
             // 先移除参数div
             this.parentNode.removeChild(document.getElementById('paramsContainer'));
@@ -166,7 +193,7 @@ function injectScript(file_path, tag, params) {
         var paramsContainer = document.createElement('div');
         paramsContainer.style.display = 'none';
         paramsContainer.setAttribute('id', 'paramsContainer');
-        for(var key in params) {
+        for (var key in params) {
             paramsContainer.setAttribute(key, params[key]);
         }
         node.appendChild(paramsContainer);
