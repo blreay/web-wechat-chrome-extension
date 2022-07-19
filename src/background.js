@@ -99,7 +99,14 @@ chrome.runtime.onMessage.addListener((request) => {
 
         check_win_id(cur_winid, null, function (tabid, obj) {
             request.tabid = tabid;
-            winid_map.set(cur_winid, request);
+            if (winid_map.has(cur_winid)) {
+                // update
+                winid_map.get(cur_winid).unreadCount = request.unReadCount;
+                winid_map.get(cur_winid).tabid = tabid;
+            } else {
+                // insert
+                winid_map.set(cur_winid, request);
+            }
             chrome.tabs.executeScript(tabid, {
                 file: 'chrome/wxInfo.js'
             }, function (res) {
@@ -115,8 +122,9 @@ chrome.runtime.onMessage.addListener((request) => {
                 values = winid_map.values();
                 for (i = 0; i < winid_map.size; i++) {
                     value = values.next().value;
-                    info.unreadCount += value.unReadCount.unReadCount;
-                    console.log("zzy109 " + value.window_id + "  count=" + value.unReadCount.unReadCount + " total=" + info.unreadCount);
+                    console.log(value);
+                    info.unreadCount += value.unreadCount.unReadCount;
+                    console.log("zzy109 " + value.window_id + "  count=" + value.unreadCount.unReadCount + " total=" + info.unreadCount);
                 }
                 if (info.login) { // 已登录
                     // info.unreadCount = state.unRead;
@@ -165,14 +173,15 @@ chrome.runtime.onMessage.addListener((request) => {
     */
 });
 
-var set_wx_winid = function (id, tabid) {
+var set_wx_winid = function (id, tabid, private) {
     //state.winid = id;
     var request = new Object();
     request.tabid = tabid;
     request.window_id = id;
+    request.private = private;
     winid_map.set(id, request);
     //winid_set.add(id);
-    console.log("zzy110: weixin windowid is added to map: " + id);
+    console.log("zzy110: weixin windowid is added to map: " + id + ' private=' + request.private);
 }
 
 var get_wx_winid = function () {
@@ -190,7 +199,8 @@ var broadcast_winid = function (str) {
 
         var tabid = value.tabid;
         var winid = value.window_id;
-        console.log("zzy112 " + value.window_id + "  tabid=" + tabid + " run executeScript");
+        var private1 = value.private;
+        console.log("zzy112 " + value.window_id + "  tabid=" + tabid + ' private=' + private1 + " run executeScript");
         // set winid to wx page
         chrome.tabs.executeScript(tabid, {
             code: " \
@@ -201,8 +211,10 @@ var broadcast_winid = function (str) {
                 paramsContainer.style.display = 'none'; \
                 paramsContainer.setAttribute('id', 'blreay_paramsContainer'); \
                 paramsContainer.setAttribute('blreay_winid', " + winid + "); \
+                paramsContainer.setAttribute('blreay_private', " + private1 + "); \
+                if (document.getElementById('blreay_paramsContainer')) { node.removeChild(document.getElementById('blreay_paramsContainer'));} \
                 node.appendChild(paramsContainer); \
-                console.log('winid is set to: ' + document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid')); \
+                console.log('winid is set to: ' + document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid') + ' private is set to ' + document.getElementById('blreay_paramsContainer').getAttribute('blreay_private')); \
                 "
         }, res => {
             let info = res[0];

@@ -71,7 +71,7 @@ class App extends Component {
                }));
                */
 
-                this.my_update_state(request.window_id, true, request.chatList.chatList, 'NO_CHANGE', 'NO_CHANGE');
+                this.my_update_state(request.window_id, true, request.chatList.chatList, 'NO_CHANGE', 'NO_CHANGE', request.private);
 
                 /*
                      this.setState(prevState => ({
@@ -158,12 +158,13 @@ console.log("zzy111: no weixin window");
         for (var windowId of winid_set.keys()) {
             console.log("zzy01 windowId=" + windowId);
 
-            that.check_win_id(windowId, that, function (tabid, obj) {
-                console.log("zzy00 matched tabid=" + tabid + ' winid=' + windowId);
+            that.check_win_id(windowId, that, function (tabid, obj, winid1) {
+                console.log("zzy00 matched tabid=" + tabid + ' winid=' + winid1);
                 /* obj.setState({
                     hasOpenWx: true
                 }); */
-                that.my_update_state(windowId, 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE', true);
+
+                that.my_update_state(winid1, 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE', true, winid_set.get(winid1).private);
 
                 // blreay, 主动获得chatlist
                 chrome.tabs.sendMessage(tabid, { getChatList: true }, function (response) {
@@ -187,24 +188,24 @@ console.log("zzy111: no weixin window");
                             isLogin: true,
                             userInfo: info
                         }); */
-                        console.log("zzy700: set userinfo to " + info + "for window_id=" + windowId);
-                        that.my_update_state(windowId, true, 'NO_CHANGE', info, 'NO_CHANGE');
+                        console.log("zzy700: set userinfo to " + info + "for window_id=" + winid1);
+                        that.my_update_state(winid1, true, 'NO_CHANGE', info, 'NO_CHANGE', 'NO_CHANGE');
                     } else {
                         /*obj.setState({
                             isLogin: false
                         });*/
-                        console.log("zzy701: set userinfo to " + info + "for window_id=" + windowId);
-                        that.my_update_state(windowId, false, 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE');
+                        console.log("zzy701: set userinfo to " + info + "for window_id=" + winid1);
+                        that.my_update_state(winid1, false, 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE', 'NO_CHANGE');
                     }
                 });
-            }, function () {
-                console.log("zzy111: no weixin window=" + windowId);
+            }, function (winid2) {
+                console.log("zzy111: no weixin window=" + winid2);
             })
         }
         //})
 
         if (this.state.users.size == 0) {
-            this.my_update_state(9999, false, 'NO_CHANGE', 'NO_CHANGE', false);
+            this.my_update_state(9999, false, 'NO_CHANGE', 'NO_CHANGE', false, false);
             // isLogin = false;
         }
 
@@ -240,8 +241,8 @@ console.log("zzy111: no weixin window");
     */
 
 
-    my_update_state = (winid, isLogin, chatList, userInfo, hasOpenWx) => {
-        console.log('winid=' + winid + ' isLogin=' + isLogin + " chatList=" + chatList + ' userInfo=' + userInfo);
+    my_update_state = (winid, isLogin, chatList, userInfo, hasOpenWx, private_win) => {
+        console.log('zzy120 winid=' + winid + ' isLogin=' + isLogin + " chatList=" + chatList + ' userInfo=' + userInfo + ' private=' + private_win);
         console.log(this.state.users);
         let id = parseInt(winid);
         var userobj = this.state.users.get(id);
@@ -253,6 +254,7 @@ console.log("zzy111: no weixin window");
         if (chatList != 'NO_CHANGE') userobj.set('chatList', chatList);
         if (userInfo != 'NO_CHANGE') userobj.set('userInfo', userInfo);
         if (hasOpenWx != 'NO_CHANGE') userobj.set('hasOpenWx', hasOpenWx);
+        if (hasOpenWx != 'NO_CHANGE') userobj.set('private', private_win);
         /*
         this.setState(prevState => ({
             users: prevState.users.set(winid, userobj)
@@ -293,12 +295,12 @@ console.log("zzy111: no weixin window");
                         console.log("zzy100 check_win_id url: " + tab.url);
                         if (/https:\/\/wx.*\.qq\.com/ig.test(tab.url)) {
                             console.log("zzy00 url matched: " + tab.url);
-                            ok_func(tab.id, obj);
+                            ok_func(tab.id, obj, win.id);
                         } else {
                             // tab.url可能是空的，刚刚创建完的window.
                             console.log("zzy00 url NOT matched: TODO, but still call ok_func() " + tab.url);
                             //ng_func();
-                            ok_func(tab.id, obj);
+                            ok_func(tab.id, obj, win.id);
                         }
                     });
                 }
@@ -306,7 +308,7 @@ console.log("zzy111: no weixin window");
         } catch (e) {
             console.error('Chrome extension, winid seems invalid:' + winid);
             console.log(e);
-            ng_func();
+            ng_func(winid);
         }
     }
 
@@ -315,9 +317,9 @@ console.log("zzy111: no weixin window");
         let windowId = winid;
         let that = this;
 
-        this.check_win_id(windowId, this, function (tabid, obj) {
+        this.check_win_id(windowId, this, function (tabid, obj, winid1) {
             chrome.windows.update(windowId, { focused: true });
-        }, function () {
+        }, function (winid2) {
             console.log("zzy130 create new window");
             let isPrivate = false;
             if (winid == 'private') { isPrivate = true; }
@@ -325,7 +327,7 @@ console.log("zzy111: no weixin window");
                 url: 'https://wx2.qq.com',
                 type: 'popup',
                 incognito: isPrivate,
-                left: 300,
+                left: 110,
                 focused: true
             }, function (w) {
                 // w is the window object
@@ -335,11 +337,11 @@ console.log("zzy111: no weixin window");
                 var bg = chrome.extension.getBackgroundPage();
                 // bg.set_wx_winid(w.id); // 访问bg的函数
 
-                that.check_win_id(w.id, that, function (tabid, obj) {
+                that.check_win_id(w.id, that, function (tabid, obj, winid1) {
 
                     // w.tabs.forEach(tab => {
-                    console.log("zzy100 check_win_id: " + w.id + " tabid: " + tabid);
-                    bg.set_wx_winid(w.id, tabid);
+                    console.log("zzy100 check_win_id: " + w.id + " tabid: " + tabid + ' private=' + isPrivate);
+                    bg.set_wx_winid(w.id, tabid, isPrivate);
 
                     // set winid to wx page
                     chrome.tabs.executeScript(tabid, {
@@ -351,6 +353,8 @@ console.log("zzy111: no weixin window");
                                 paramsContainer.style.display = 'none'; \
                                 paramsContainer.setAttribute('id', 'blreay_paramsContainer'); \
                                 paramsContainer.setAttribute('blreay_winid', " + w.id + "); \
+                                paramsContainer.setAttribute('blreay_private', " + isPrivate + "); \
+                                if (document.getElementById('blreay_paramsContainer')) { node.removeChild(document.getElementById('blreay_paramsContainer'));} \
                                 node.appendChild(paramsContainer); \
                                 console.log('winid is set to: ' + document.getElementById('blreay_paramsContainer').getAttribute('blreay_winid')); \
                                 "
@@ -358,10 +362,11 @@ console.log("zzy111: no weixin window");
                         let info = res[0];
                         console.log("zzy500-1: result: " + info);
                         console.log(info);
+                        window.close();
                     });
 
-                }, function () {
-                    console.log("window is not valid, error occured");
+                }, function (winid2) {
+                    console.log("window is not valid, error occured: winid2=" + winid2);
                 })
             });
 
@@ -398,21 +403,21 @@ console.log("zzy111: no weixin window");
 
         // let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
         let windowId = winid;
-        this.check_win_id(windowId, this, function (tabid, obj) {
+        this.check_win_id(windowId, this, function (tabid, obj, winid1) {
             obj.setState({
                 hasOpenWx: true
             });
 
             chrome.tabs.sendMessage(tabid, { username: username }, function (response) {
-                console.log('message has send to wxobserve.js for username:' + username);
+                console.log('message has send to wxobserve.js for username:' + username + '  winid=' + winid1);
             });
-            obj.viewWx(windowId);
-        }, function () {
-            console.log("winid invalid");
+            obj.viewWx(winid1);
+        }, function (winid2) {
+            console.log("winid invalid: " + winid2);
         })
     }
 
-    loginout = () => {
+    loginout = (winid) => {
         /*
         chrome.windows.getAll({
             populate: true
@@ -434,8 +439,8 @@ console.log("zzy111: no weixin window");
         });
         */
 
-        let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
-        this.check_win_id(windowId, this, function (tabid, obj) {
+        // let windowId = chrome.extension.getBackgroundPage().get_wx_winid();
+        this.check_win_id(winid, this, function (tabid, obj, winid1) {
             obj.setState({
                 hasOpenWx: true
             });
@@ -444,8 +449,8 @@ console.log("zzy111: no weixin window");
                 console.log('message has send to wxobserve.js')
             });
             window.close();
-        }, function () {
-            console.log("winid invalid");
+        }, function (winid2) {
+            console.log("winid invalid: " + winid2);
         })
     }
 
@@ -465,8 +470,11 @@ console.log("zzy111: no weixin window");
         // const { isLogin, userInfo } = this.state;
         const isLogin = this.state.users.get(winid).get('isLogin');
         const userInfo = this.state.users.get(winid).get('userInfo');
-        console.log('in _renderUserInfo, isLogin=' + isLogin + ' userInfo=' + userInfo);
+        const private1 = this.state.users.get(winid).get('private');
         console.log(userInfo);
+        if (typeof (userInfo) != "undefined") {
+            console.log('zzy130 in _renderUserInfo, isLogin=' + isLogin + ' userInfo=' + userInfo + ' userInfo.private=' + private1);
+        }
         return (
             (isLogin && !!userInfo) ? (
                 <MuiThemeProvider>
@@ -474,13 +482,13 @@ console.log("zzy111: no weixin window");
                         <ListItem
                             disabled={true}
                             leftAvatar={
-                                <Avatar src={userInfo.avatar} />
+                                <Avatar src={private1 == true ? require('./img/wx.jpg') : userInfo.avatar} />
                             }
                         >
                             <div className="nickname" style={{ position: 'relative' }}>
                                 {userInfo.nickname}
                                 <span className="private" onClick={() => { this.viewWx('private') }}>New</span>
-                                <span className="loginout" onClick={() => { this.viewWx(winid) }}>退出</span>
+                                <span className="loginout" onClick={() => { this.loginout(winid) }}>退出</span>
                             </div>
                         </ListItem>
                     </List>
@@ -517,7 +525,7 @@ console.log("zzy111: no weixin window");
         console.log('in _renderButton, isLogin=' + isLogin + ' userInfo=' + 'xxx');
 
         return (
-            <div style={{ borderTop: '1px solid rgba(255, 255, 255, .4)' }}>
+            <div style={{ borderTop: '1px solid rgba(255, 255, 255, .4)', borderBottom: '1px solid rgba(255, 255, 255, .4)' }}>
                 <MuiThemeProvider>
                     <FlatButton label={isLogin ? '进入完整版' : '登录'}
                         fullWidth={true}
@@ -534,6 +542,7 @@ console.log("zzy111: no weixin window");
         const isLogin = this.state.users.get(winid).get('isLogin');
         const userInfo = this.state.users.get(winid).get('userInfo');
         const chatList = this.state.users.get(winid).get('chatList');
+        const private1 = this.state.users.get(winid).get('private');
         console.log('in _renderChatList, isLogin=' + isLogin + ' userInfo=' + userInfo + ' chatList=' + chatList);
         console.log(chatList);
 
@@ -588,7 +597,7 @@ console.log("zzy111: no weixin window");
                                                                 backgroundColor: '#d44139'
                                                             }}
                                                         >
-                                                            <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                            <Avatar src={private1 == true? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
                                                         </Badge>
                                                     ) : (
                                                         <Badge
@@ -603,11 +612,11 @@ console.log("zzy111: no weixin window");
                                                                 backgroundColor: '#d44139'
                                                             }}
                                                         >
-                                                            <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                            <Avatar src={private1 == true? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
                                                         </Badge>
                                                     )
                                                     : (
-                                                        <Avatar src={'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                        <Avatar src={private1 == true? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
 
                                                     )
                                             }
@@ -621,7 +630,7 @@ console.log("zzy111: no weixin window");
                                             }
                                             secondaryText={
                                                 <p>
-                                                    <span style={{ color: '#989898', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                                    <span style={{ color: '#fff', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                                                         {!!item.NoticeCount && item.MMInChatroom && item.Statues == 0 ? `[${item.NoticeCount}条]${item.MMDigest}` : item.MMDigest}
                                                     </span>
                                                 </p>

@@ -1,11 +1,11 @@
-.wrap {  width: 280px; background: rgb(80, 139, 231); color: #fff; }
+.wrap {  width: 280px; background: rgb(80, 139, 231); color: #fff; padding: 1px; }
 .title { font-size: 16px; font-weight: bold; padding: 10px 0; text-align: center; }
-.user-info { margin-bottom: 15px; }
-.user-info .avatar { display: inline-block; width: 40px; height: 40px; vertical-align: top; }
+.user-info { margin-bottom: 2px; }
+.user-info .avatar { display: inline-block; width: 40px; height: 30px; vertical-align: top; }
 .nickname { position: relative; color: #fff; padding-right: 30px; overflow: hidden; text-overflow:ellipsis;  white-space: nowrap; }
 .nickname .loginout { position: absolute; right: 0; top: 0; font-size: 12px; cursor: pointer; }
 .nickname .loginout:hover { color: #5186ed; }
-.private { position: relative; right: 0; top: 30; font-size: 12px; cursor: pointer; }
+.private { position: absolute; right: 30px; top: 0; font-size: 12px; cursor: pointer; }
 .chatNickName { position: relative; font-size: 13px; color: #fff; padding-right: 30px; overflow: hidden; text-overflow:ellipsis;  white-space: nowrap; }
 .chatNickName .time { position: absolute; top: 0; right: 0; font-size: 12px; }
 .unread { font-size: 12px; }
@@ -14,7 +14,7 @@
 .btn-wrap .btn { cursor: pointer; font-size: 12px; }
 .btn-wrap .btn:hover { text-decoration: underline; color: #5186ed; }
 
-.list { max-height: 400px; overflow-y: auto; overflow-x: hidden; }
+.list { max-height: 800px; overflow-y: auto; overflow-x: hidden; }
 .list::-webkit-scrollbar {
     width: 4px;
     height: 4px;
