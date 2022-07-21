@@ -4,6 +4,7 @@ let resetTimer = null;
 let currentWinID = null;
 let g_cur_winid = null;
 let g_private_mode = false;
+let g_win_active = false;
 
 // currentWinID = window.id;
 // console.log('zzy100: wxobserve.js is loaded, current_window_id=' + currentWinID);
@@ -182,8 +183,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    window.onblur = function (e) {
+        console.log("未激活状态！blur");
+        g_win_active = false;
+        console.log('zzy103-1: injectScript for blur');
+        injectScript(chrome.extension.getURL('chrome/blurPage.js'), 'body');
+    }
+    window.onfocus = function (e) {
+        console.log("激活状态！")
+        g_win_active = true;
+    }
+
     //Blreay: 后台持续往前台发送未读信息数量，显示在右上角, 间隔10s
-    //本来是持续发全部的chatlist, 但是发现很占CPU，而且运行一会儿会内存不足异常退出。
+    //本来是持续发全部的chatlist, 但是发现很占CPU，而且运行一会儿内存不足异常退出。
     setInterval(function (e) {
         // 后台发送unread message count
         // console.log('zzy102: injectScript for chrome/getUnreadCount.js');
@@ -208,8 +220,15 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (e) {
             console.log("zzy110: exception occured: " + e.message)
             console.log(e);
+            // 请求background page广播winid
             // chrome.extension.getBackgroundPage().broadcast_winid("aaa");
             chrome.runtime.sendMessage({ broadcast_winid: "bbb", window_id: '000' });
+        }
+
+        // if window is not actived, do something to keep wx online, wx2 will expired after a while
+        if (!g_win_active) {
+            console.log("zzy120: keep active, g_win_active=" + g_win_active);
+            do_keep_active();
         }
     }, 5000);
 
@@ -304,5 +323,12 @@ function injectScript(file_path, tag, params) {
         node.appendChild(paramsContainer);
     }
     node.appendChild(script);
+}
+
+function do_keep_active() {
+    console.log('zzy103: injectScript for keepActive');
+    injectScript(chrome.extension.getURL('chrome/keepActive.js'), 'body');
+    console.log('zzy103: injectScript for blur');
+    injectScript(chrome.extension.getURL('chrome/blurPage.js'), 'body');
 }
 

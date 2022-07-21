@@ -14,7 +14,7 @@
 .btn-wrap .btn { cursor: pointer; font-size: 12px; }
 .btn-wrap .btn:hover { text-decoration: underline; color: #5186ed; }
 
-.list { max-height: 800px; overflow-y: auto; overflow-x: hidden; }
+.list { max-height: 8000px; overflow-y: auto; overflow-x: hidden; }
 .list::-webkit-scrollbar {
     width: 4px;
     height: 4px;

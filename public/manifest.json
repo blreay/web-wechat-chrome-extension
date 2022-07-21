@@ -11,29 +11,49 @@
     "128": "images/20.png"
   },
   "background": {
-    "scripts": ["background.js"]
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "options_ui": {
+    "page": "options.html",   // 添加一些默认的样式，推荐使用
+    "chrome_style": true
   },
   "browser_action": {
     "default_icon": "images/20.png",
-    "default_title": "欢迎使用微信网页版扩展",
+    "default_title": "欢迎使用微信网页版增强扩展",
     "default_popup": "index.html"
   },
-  "content_scripts": [{
-    "js": [ "chrome/wxobserve.js" ],
-    "matches": [ "*://wx2.qq.com/*", "*://wx.qq.com/*" ],
-    "run_at": "document_start"
-  }],
-  "permissions": ["tabs", 
-    "https://*.qq.com/*", 
+  "content_scripts": [
+    {
+      "js": [
+        "chrome/wxobserve.js"
+      ],
+      "matches": [
+        "*://wx2.qq.com/*",
+        "*://wx.qq.com/*"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": [
+    "contextMenus", // 右键菜单
+    "tabs", // 标签
+    "notifications", // 通知
+    "webRequest", // web请求
+    "webRequestBlocking",
+    "storage", // 插件本地存储
+    "https://*.qq.com/*",
     "https://wx2.qq.com/*",
     "https://wx.qq.com/*",
-    "contextMenus",
-    "notifications"],
+    "contextMenus"
+  ],
   "homepage_url": "https://github.com/blreay/web-wechat-chrome-extension",
   "web_accessible_resources": [
     "chrome/catchChatList.js",
     "chrome/activeChatItem.js",
     "chrome/getUnreadCount.js",
+    "chrome/keepActive.js",
     "chrome/blurPage.js",
     "chrome/loginOut.js"
   ]

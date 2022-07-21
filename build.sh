@@ -33,7 +33,7 @@ function sub_cmd_build {
   eval "${CMD}"
   BCS_CHK_RC0 "exec failed: ${CMD}"
 
-  MSG "Done"
+  MSG "Done        $(date +'%Y/%m/%d %H:%M:%S')"
 }
 
 function my_entry {
