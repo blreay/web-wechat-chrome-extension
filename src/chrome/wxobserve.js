@@ -5,6 +5,7 @@ let currentWinID = null;
 let g_cur_winid = null;
 let g_private_mode = false;
 let g_win_active = false;
+let g_blur_timer = null;
 
 // currentWinID = window.id;
 // console.log('zzy100: wxobserve.js is loaded, current_window_id=' + currentWinID);
@@ -151,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // console.log(e)
                     // console.log(e.data.data);
                     // 将inject script拿到的数据发给popup展示
-                    chrome.runtime.sendMessage({ chatList: e.data.data, window_id: winid, private: g_private_mode });
+                    chrome.runtime.sendMessage({ chatList: e.data.data, window_id: g_cur_winid, private: g_private_mode });
                 };
                 //}, false);
             } catch (e) {
@@ -186,8 +187,13 @@ document.addEventListener('DOMContentLoaded', function () {
     window.onblur = function (e) {
         console.log("未激活状态！blur");
         g_win_active = false;
-        console.log('zzy103-1: injectScript for blur');
-        injectScript(chrome.extension.getURL('chrome/blurPage.js'), 'body');
+        if (g_blur_timer) clearTimeout(g_blur_timer);
+        g_blur_timer = setTimeout(function (e) {
+            if (!g_win_active) {
+                console.log('zzy103-1: injectScript for blur');
+                injectScript(chrome.extension.getURL('chrome/blurPage.js'), 'body');
+            }
+        }, 1000 * 5); //5秒之後再自動設置blur
     }
     window.onfocus = function (e) {
         console.log("激活状态！")
@@ -206,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 g_private_mode = document.getElementById('blreay_paramsContainer').getAttribute('blreay_private');
             }
             winid = g_cur_winid;
-            console.log("zzy600: winid from blreay_paramsContainer.blreay_winid = " + winid);
+            console.log("zzy600: winid from blreay_paramsContainer.blreay_winid = " + g_cur_winid);
             injectScript(chrome.extension.getURL('chrome/getUnreadCount.js'), 'body');
             // fix bug: message is received multiple times
             // https://zhuanlan.zhihu.com/p/144330696?from_voters_page=true
@@ -215,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // console.log(e)
                 // console.log(e.data.data);
                 // 将inject script拿到的数据发给popup展示
-                chrome.runtime.sendMessage({ unReadCount: e.data.data, window_id: winid, private: g_private_mode });
+                chrome.runtime.sendMessage({ unReadCount: e.data.data, window_id: g_cur_winid, private: g_private_mode });
             };
         } catch (e) {
             console.log("zzy110: exception occured: " + e.message)
@@ -224,13 +230,16 @@ document.addEventListener('DOMContentLoaded', function () {
             // chrome.extension.getBackgroundPage().broadcast_winid("aaa");
             chrome.runtime.sendMessage({ broadcast_winid: "bbb", window_id: '000' });
         }
+    }, 1000 * 10); // 10 second
 
+    // setup a timer to keep wx active
+    setInterval(function (e) {
         // if window is not actived, do something to keep wx online, wx2 will expired after a while
         if (!g_win_active) {
             console.log("zzy120: keep active, g_win_active=" + g_win_active);
             do_keep_active();
         }
-    }, 5000);
+    }, 1000 * 60); // 60s keepactive
 
     // Blreay: cannot work
     /*
@@ -328,7 +337,7 @@ function injectScript(file_path, tag, params) {
 function do_keep_active() {
     console.log('zzy103: injectScript for keepActive');
     injectScript(chrome.extension.getURL('chrome/keepActive.js'), 'body');
-    console.log('zzy103: injectScript for blur');
+    console.log('zzy103: injectScript for blur for keepactive');
     injectScript(chrome.extension.getURL('chrome/blurPage.js'), 'body');
 }
 
