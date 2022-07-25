@@ -176,7 +176,7 @@ console.log("zzy111: no weixin window");
                     chrome.tabs.sendMessage(tabid, { getChatList: true }, function (response) {
                         console.log('message has send to wxobserve.js for getChatList in timer')
                     });
-                }, 2000);
+                }, 2000); // 2 seconds
 
                 chrome.tabs.executeScript(tabid, {
                     file: 'chrome/wxInfo.js'
