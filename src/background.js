@@ -97,6 +97,16 @@ chrome.runtime.onMessage.addListener((request) => {
             g_unread = 0;
         }
 
+        // Blreay: this can work, but this API cannot be called in contents script.
+        /*
+        chrome.notifications.create(null, {
+            type: 'basic',
+            iconUrl: 'images/64.png',
+            title: '这是标题',
+            message: '这是我的第2个通知测试'
+           });
+        */
+
         check_win_id(cur_winid, null, function (tabid, obj) {
             request.tabid = tabid;
             if (winid_map.has(cur_winid)) {

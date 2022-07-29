@@ -1,4 +1,15 @@
 
+
+// 点击“阅读”按钮，然后过2秒切回“聊天”页面
+console.log('zzy620: keepactive go to reading page');
+document.getElementsByClassName('tab_item')[1].getElementsByClassName('chat')[0].click();
+setTimeout(function () {
+    console.log('zzy620: keepactive goback to chat list page');
+    document.getElementsByClassName('tab_item')[0].getElementsByClassName('chat')[0].click();
+}, 2 * 1000);
+
+// this is my first version, but sometimes it can not work. reason unknown
+/*
 var wxList = window.angular.element(document.getElementsByClassName('chat_list')[0]).scope().chatList;
 var entries = wxList.entries() // 得到map对象的键值对迭代器。
 var entryObj = entries.next() // entries.next()指向下一个键值对的对象。
@@ -26,6 +37,7 @@ while (true) {
         entryObj = entries.next()
     }
 }
+*/
 
 // 登陆网页版微信时，一会儿不用就要重新扫码，重新登陆，这真是很恶心的事情，SO ,想了个办法，让它保持登陆状态，网上说只要一直用就不会掉，那好办呀：
 // 在登陆页按F12打开谷歌调试工具，在控制台把这段代码粘进去：

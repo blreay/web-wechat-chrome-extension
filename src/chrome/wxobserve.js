@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // chrome.extension.getBackgroundPage().broadcast_winid("aaa");
             chrome.runtime.sendMessage({ broadcast_winid: "bbb", window_id: '000' });
         }
+
     }, 1000 * 10); // 10 second
 
     // setup a timer to keep wx active
@@ -239,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log("zzy120: keep active, g_win_active=" + g_win_active);
             do_keep_active();
         }
-    }, 1000 * 60); // 60s keepactive
+    }, 1000 * 90); // 90s keepactive
 
     // Blreay: cannot work
     /*
