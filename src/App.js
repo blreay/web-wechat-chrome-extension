@@ -327,7 +327,10 @@ console.log("zzy111: no weixin window");
                 url: 'https://wx2.qq.com',
                 type: 'popup',
                 incognito: isPrivate,
-                left: 110,
+                height: 900,
+                width: 1000,
+                top: 2,
+                left: 100,
                 focused: true
             }, function (w) {
                 // w is the window object
