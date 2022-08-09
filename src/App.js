@@ -488,7 +488,7 @@ console.log("zzy111: no weixin window");
                                 <Avatar src={private1 == true ? require('./img/wx.jpg') : userInfo.avatar} />
                             }
                         >
-                            <div className="nickname" style={{ position: 'relative' }}>
+                            <div className="nickname" style={{ position: 'relative' }} onClick={() => { window.close() }}>
                                 {userInfo.nickname}
                                 <span className="private" onClick={() => { this.viewWx('private') }}>New</span>
                                 <span className="loginout" onClick={() => { this.loginout(winid) }}>退出</span>
@@ -555,7 +555,7 @@ console.log("zzy111: no weixin window");
             if (typeof (chatList) == 'undefined' || !chatList.length) {
                 return (
                     <MuiThemeProvider>
-                        <div style={{ textAlign: 'center' }}>
+                        <div onClick={() => { window.close() }} style={{ textAlign: 'center' }}>
                             <CircularProgress />
                             <div style={{ fontSize: '12px', paddingBottom: '10px' }}>未读消息列表获取中...</div>
                         </div>
@@ -600,7 +600,7 @@ console.log("zzy111: no weixin window");
                                                                 backgroundColor: '#d44139'
                                                             }}
                                                         >
-                                                            <Avatar src={private1 == true? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                            <Avatar src={private1 == true ? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
                                                         </Badge>
                                                     ) : (
                                                         <Badge
@@ -615,11 +615,11 @@ console.log("zzy111: no weixin window");
                                                                 backgroundColor: '#d44139'
                                                             }}
                                                         >
-                                                            <Avatar src={private1 == true? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                            <Avatar src={private1 == true ? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
                                                         </Badge>
                                                     )
                                                     : (
-                                                        <Avatar src={private1 == true? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
+                                                        <Avatar src={private1 == true ? '' : 'https://wx2.qq.com' + item.HeadImgUrl} />
 
                                                     )
                                             }
