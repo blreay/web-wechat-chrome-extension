@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('zzy103-1: injectScript for blur');
                 injectScript(chrome.extension.getURL('chrome/blurPage.js'), 'body');
             }
-        }, 1000 * 5); //5秒之後再自動設置blur
+        }, 1000 * 15); //5秒之後再自動設置blur
     }
     window.onfocus = function (e) {
         console.log("激活状态！")
