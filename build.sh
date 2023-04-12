@@ -12,13 +12,14 @@ typeset g_mandatory_utilities="yarn"
 function my_show_usage {
     cat - <<EOF
 #################################################################
-Storage cluster management tool used to expand cluster
+My Chrome extension build and pack tool
 #################################################################
 
 Usage: ${g_appname_short} action 
-          action           : specify sub command, only support "pack" now
+          action           : support "build" and "pack"
 Examples:
-        ${g_appname_short} expand
+        ${g_appname_short} build
+        ${g_appname_short} pack
 EOF
 }
 
@@ -53,9 +54,12 @@ function my_entry {
 }
 
 function sub_cmd_pack {
-	#chrome.exe --pack-extension="D:\Projects\Beyond Feeds Flood"
+	mark=$(date +'%Y%m%d_%H%M%S')
+	if [[ -f build.crx ]]; then mv build.crx build.crx.$mark; fi
+	if [[ -f build.pem ]]; then mv build.pem build.pem.$mark; fi
+	set -vx
 	exe="/cygdrive/c/Program Files/Google/Chrome/Application/chrome.exe"
-	"${exe}" --pack-extension="D:\mydisk\cygwin\home\zhaoyong.zzy\git\web-wechat-chrome-extension"
+	"${exe}" --pack-extension="$(cygpath -w $PWD/build)"
 }
 
 main $@
