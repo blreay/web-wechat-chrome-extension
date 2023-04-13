@@ -53,13 +53,19 @@ chrome.runtime.onConnect.addListener(function (externalPort) {
         for (i = 0; i < winid_map.size; i++) {
             value = values.next().value;
             // info.unreadCount += value.unReadCount.unReadCount;
-            console.log("zzy111 send blur " + value.window_id + "  tabid=" + value.tabid);
+            console.log("zzy111 donot send blur " + value.window_id + "  tabid=" + value.tabid);
             // 发送消失，把焦点设置为无效
+            // Blreay: popup被关闭了, 此时需要强制blur wechat窗口么？这个最好设置成可配置的。
+            // 考虑到短暂的离开可能是去拷贝内容，再回来发送消息，所以把blur暂时去掉。
+            // 本来wechat窗口失去焦点的时候，也会15秒后自动blur的。
+            // TODO: 需要搞成可配置的选项。
+            /*
             if (value.tabid) {
                 chrome.tabs.sendMessage(value.tabid, { blur: true }, function (response) {
                     console.log('message has send to wxobserve.js for blurpage, tabid=' + value.tabid);
                 });
             }
+            */
         }
 
     });
